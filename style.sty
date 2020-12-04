@@ -1,0 +1,97 @@
+\ProvidesPackage{style}
+
+% ---------------------
+% Pacotes OBRIGATÓRIOS
+% ---------------------
+\usepackage{lmodern}				% Usa a fonte Latin Modern			
+\usepackage[T1]{fontenc}			% Selecao de codigos de fonte.
+\usepackage[utf8]{inputenc}		% Codificacao do documento (conversão automática dos acentos)
+\usepackage{color}				% Controle das cores
+\usepackage{graphicx,graphicx}	% Inclusão de gráficos
+\usepackage{titling}
+\usepackage{import}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{subfiles} % Best loaded last in the preamble
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{gensymb}
+\usepackage[toc, titletoc, header]{appendix} %For appendix 
+\usepackage[section]{placeins}
+\usepackage{dirtree} %File Structure Diagram
+\usepackage{wasysym}
+\usepackage{enumitem}
+
+\usepackage{geometry}
+\geometry{
+ a4paper,
+ right=20mm,
+ left=30mm,
+ top=20mm,
+ bottom=20mm,
+ }
+
+\graphicspath{ {images/} }
+
+% Formatação do Título
+\makeatletter
+\renewcommand\maketitle{
+\begin{center}
+{\includegraphics[width=\textwidth]{images/timbreUFMS.png}}
+\\[8\baselineskip]
+{\large  \theauthor}
+\\[11\baselineskip]
+{\Large\thetitle}
+\vfill
+{\thedate}
+\end{center}
+\pagenumbering{gobble}}
+\makeatother
+
+\title{\uppercase{Mass Exchange in Dead Zones: a Numerical Approach}}
+\author{Luiz Eduardo Domingos de Oliveira}
+\date{{Campo Grande, MS}\\
+December 2020}
+
+% Formatação do Texto
+\usepackage{indentfirst}			% Indenta o primeiro parágrafo de cada seção.
+\setlength{\parindent}{1.27cm}
+\setlength{\parskip}{1em}
+\renewcommand{\baselinestretch}{1.3} %1 single spacing; 1.3 one-and-a-half spacing; 1.6 double spacing 
+
+% Referencias
+\usepackage[style=abnt]{biblatex}
+\bibliography{references.bib}
+
+% Monospaced font for code
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=C++,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=4
+} 
+
+\usepackage{hyperref}
+\hypersetup{
+    urlcolor=blue,
+}
+
+\urlstyle{same}

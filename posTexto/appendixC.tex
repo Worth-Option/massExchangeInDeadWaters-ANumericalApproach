@@ -1,0 +1,1141 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+\noindent
+In this appendix the script used to process simulation data is presented. This code uses python to calculate the ensemble averaging properties in a 2D plane.
+\section{File Structure}
+\noindent
+The file structure of the script is shown bellow:
+\\
+\dirtree{%
+.1 /.
+.2 bin.
+.3 dataProcessing.py\DTcomment{Data Analysing and Exporting script}.
+.3 importCSV.py\DTcomment{CSV import script}.
+.3 mass.py\DTcomment{Mass analysis script}.
+.3 plot.py\DTcomment{Plotting script}.
+.3 multipleSimulationImport.py\DTcomment{CSV import script}.
+.3 multipleSimulationProcess.py\DTcomment{Velocity Analysis script}.
+.3 multipleSimulationPlot.py\DTcomment{Plotting and export script}.
+.2 dataset\DTcomment{Directory with literature data}.
+.2 treatment\DTcomment{Directory for multiple simulations treatment}.
+.3 results\DTcomment{Software Created Directory}.
+.2 preTreatment\DTcomment{Directory for a single simulation treatment}.
+.3 results\DTcomment{Software Created Directory}.
+.2 preProcessing.py.
+.2 dataAnalysis.py.
+}
+\noindent
+The requirements of the script are:
+\begin{itemize}
+\item Python 3.x
+\item Scipy
+\item Numpy
+\item Pandas
+\item Matplotlib
+\end{itemize}
+\noindent
+\section{preProcessing.py}
+The execution of the preProcessing.py script depends on the preTreatment directory that contains the .csv files to be analysed and the dataset directory that contains the csv extracted from literature.
+
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Main module
+
+This script analyses the output of simulations ran on OpenFoam
+The analysis steps are performed by the modules in the bin folder
+"""
+
+import os
+import shutil
+import time
+start_time = time.time()
+
+# Clear the previous results folder
+if os.path.exists('preTreatment/results'):
+    shutil.rmtree('preTreatment/results')
+os.makedirs('preTreatment/results')
+os.makedirs('preTreatment/results/Excel')
+os.makedirs('preTreatment/results/CSV')
+os.makedirs('preTreatment/results/Plot')
+
+# Define Global Variables
+
+H = 0.10
+U = 0.101
+W = 0.15
+L = 0.25
+Y0 = 0.30
+X0 = 0.25
+RHO = 1e-6
+massTimeZero = 150
+
+# Import CSV
+exec(open("bin/importCSV.py").read())
+print("""Importing Done...
+Elapsed Time %.3f s\n""" %(time.time() - start_time))
+
+# Data Processing
+exec(open("bin/dataProcess.py").read())
+print("""Processing Done...
+Elapsed Time %.3f s\n""" %(time.time() - start_time))
+
+# Mass Fitting
+exec(open("bin/mass.py").read())
+print("""Mass Fitting Done...
+Elapsed Time %.3f s\n""" %(time.time() - start_time))
+
+# Plot Data
+exec(open("bin/plot.py").read())
+print("""Plotting Done...
+Elapsed Time %.3f s\n""" %(time.time() - start_time))
+
+# Error Measurements
+#exec(open("bin/statistics.py").read())
+
+print("""All Done...
+Execution Time %.3f seconds""" %(time.time() - start_time))
+
+\end{lstlisting}
+\section{dataAnalysis.py}
+\noindent
+The execution of the dataAnalysis.py script depends on the treatment directory that contains the .csv files to be analysed. These files must be pre processed using the previous script.
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import os
+
+# Create Results Folder
+if not os.path.exists('treatment/results'):
+    os.makedirs('treatment/results')
+
+# Import CSV
+exec(open("bin/multipleSimulationImport.py").read());
+
+# Process Data
+exec(open("bin/multipleSimulationProcess.py").read());
+
+# Data plot
+exec(open("bin/multipleSimulationPlot.py").read());
+\end{lstlisting}
+\section{preProcessing Scripts}
+\subsection{importCSV.py}
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Data is imported from text files to be later processed and ploted
+"""
+
+# Libraries
+import os
+import re
+import numpy as np
+import pandas as pd
+
+# Import Literature
+literatureExp = pd.read_csv('dataset/fig4/fig4a.csv', header = 1, usecols=(0,1))
+literatureExp.columns = ['(y-y0)/H','u/U']
+literatureExp = literatureExp.dropna()
+literatureLES = pd.read_csv('dataset/fig4/fig4a.csv', header = 1, usecols=(2,3))
+literatureLES.columns = ['(y-y0)/H','u/U']
+massLiterature = pd.read_csv('dataset/mass/mass.csv', header = 1)
+massLiterature.columns = ['Vegetation Density', 'Td']
+
+# Tracer data
+tracerData = pd.read_csv('preTreatment/tracerVolAve.dat',
+                         delimiter='\t', header = 3)
+tracerData.columns = ['time', 'tracerVol']
+tracerData.tracerVol[0] = 1
+tracerData.time = tracerData.time - massTimeZero
+
+# Generic Planes
+files = os.listdir('preTreatment')
+
+# Check for csv files
+rawFiles = list()
+uniqueRaw = list()
+uniqueVar = list()
+
+# Removes ':' from file name
+for item in files:
+    if ':' in item:    
+        newname = item.split(':')[1]
+        os.rename('preTreatment/'+item, 'preTreatment/'+newname)
+        
+files = os.listdir('preTreatment')
+
+for item in files:
+      if re.search('.\.raw', item):
+          rawFiles.append(item)
+          
+rawFiles.sort()
+
+for item in rawFiles:
+    try:
+        plane = re.findall("_([\d\D]..)", item)[0]
+        variableName = re.split("_", item)[0]
+        if plane not in uniqueRaw:
+            uniqueRaw.append(plane)
+        if variableName not in uniqueVar:
+            uniqueVar.append(variableName)
+    except:continue
+
+def cleanHeader(name):
+    fh = open('preTreatment/'+name, "rt")
+    data = fh.read()
+    # data = re.sub(r':\S+ ', r'', data)
+    data = data.replace('# ', '')
+    data = data.replace('  ', ' ') #removes double spacing
+    
+    fh.close()
+    fh = open('preTreatment/'+name, "wt")
+    fh.write(data)
+    fh.close()
+
+# Import generated data
+for item in rawFiles:
+    for item2 in uniqueRaw:
+        try:
+            plane = re.findall("_([\d\D]..)", item)[0]
+            if plane == item2:
+                cleanHeader(item)
+                variableName = re.split("_", item)[0]
+                aux = pd.read_csv('preTreatment/'+item, sep=" ", header=1,
+                                  float_precision="high",skipinitialspace=True)
+                #if aux.isnull().values.any():continue
+                try:
+                    if variableName not in locals():vars()[variableName] = aux
+                    else:
+                        vars()[variableName] = pd.concat([vars()[variableName],aux],
+                                              ignore_index=True, axis=1)
+                        vars()[variableName] = vars()[variableName].dropna(axis=0, how='all')
+                        vars()[variableName] = vars()[variableName].dropna(axis=1, how='all')
+                except:continue
+        except:continue
+
+del aux, files, variableName, item, item2, plane, rawFiles
+
+\end{lstlisting}
+
+\subsection{dataProcessing.py}
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+This code processes the data imported from importcsv.py
+The data is ensembled averaged and then exported to plot.py script
+"""
+
+import pandas as pd
+import openpyxl
+
+def dfRename(var, dtf):
+    names = ['x', 'y', 'z']
+    names.extend(var)
+    dtf.columns = names
+
+def clearLimits(df,x0,x1,y0,y1,z0,z1):
+# =============================================================================
+#     Clear extra values inside variables.
+#     This script uses user values of the bound coordinates
+# =============================================================================
+
+    df.drop(df[df.x < x0].index, inplace=True)
+    df.drop(df[df.x > x1].index, inplace=True)
+    df.drop(df[df.y < y0].index, inplace=True)
+    df.drop(df[df.y > y1].index, inplace=True)
+    df.drop(df[df.z < z0].index, inplace=True)
+    df.drop(df[df.z > z1].index, inplace=True)
+    return df
+
+def excelExport(var, name):
+# =============================================================================
+#     Creates and appends planes into an spreadsheet
+# =============================================================================
+    
+    if not os.path.isfile('preTreatment/results/Excel/'+name+'.xlsx'):
+        wb = openpyxl.Workbook()
+        wb.save('preTreatment/results/Excel/'+name+'.xlsx')
+
+    with pd.ExcelWriter('preTreatment/results/Excel/'+name+'.xlsx',
+                        engine="openpyxl", mode='a') as writer:
+        for df_name, df in var.items():
+            df.to_excel(writer, sheet_name=df_name)
+            
+def csvExport(df, name):
+# =============================================================================
+#     Creates and appends planes into separated csv files
+# =============================================================================
+    df.to_csv('preTreatment/results/CSV/'+name+'.csv')
+
+def varTreatment(planes, physicalVar, colNames, nColumns, direction,
+                 varName, roundPar, first, last):
+# =============================================================================
+#     Treats data in an ensemble averaging proceedure in the provided direction
+# =============================================================================
+
+    # Local Variable Declaration
+    varDict = dict()
+    kk = first * nColumns
+    startPos = first
+    stopPos = last * nColumns
+    ll = 0
+  
+    # Reads all the files and ensemble in a dict in that each ii is a plane
+    for ii in planes:
+        key = ii
+        key = int(re.sub('\D', '',key))
+        if key < startPos:
+            continue
+        if kk > stopPos: 
+            break
+        for jj in range(nColumns):
+            ll = kk + jj
+            if ll%nColumns == 0: # number of columns
+                varDict[ii] = physicalVar.iloc[:,ll]
+            else:
+                varDict[ii] = \
+                    pd.concat([varDict[ii], physicalVar.iloc[:,ll]], axis=1)
+                    
+        kk = kk + nColumns
+
+        dfRename(colNames, varDict[ii])
+        clearLimits(varDict[ii], 0.25, 0.50, 0.30, 0.45, 0, 0.1)
+        varDict[ii] = varDict[ii].dropna(axis=0, how='all')
+        varDict[ii] = varDict[ii].dropna(axis=1, how='all')
+
+        # Get vector magnitude
+        if nColumns > 4:
+            df = pd.DataFrame()
+            for i in colNames:
+                df[i] = varDict[ii][i]**2
+            df['mag'] = (df.sum(axis=1))**(1/2)
+            varDict[ii]['mag'] = df.mag
+            expColNames = colNames + ['mag']
+        else:
+            expColNames = colNames
+            
+        if direction == "x":
+            varDict[ii] = varDict[ii].drop(columns=['y', 'z'])
+            varDict[ii] = varDict[ii].\
+            groupby(varDict[ii].x.round(roundPar),as_index=False).mean()
+            varDict[ii][direction] = (varDict[ii][direction] - 0.25)/L
+            varDict[ii].columns = ['('+direction+'-x0)'+'/L'] + expColNames
+        elif direction == 'y':
+            varDict[ii] = varDict[ii].drop(columns=['x', 'z'])
+            varDict[ii] = varDict[ii].\
+            groupby(varDict[ii].y.round(roundPar),as_index=False).mean()
+            varDict[ii][direction] = (varDict[ii][direction] - 0.30)/H
+            varDict[ii].columns = ['('+direction+'-y0)'+'/H'] + expColNames
+        elif direction == 'z':
+            varDict[ii] = varDict[ii].drop(columns=['x', 'y'])
+            varDict[ii] = varDict[ii].\
+            groupby(varDict[ii].z.round(roundPar),as_index=False).mean()
+            varDict[ii][direction] = varDict[ii][direction]/H
+            varDict[ii].columns = [direction+'/H'] + expColNames
+            
+        excelExport(varDict, varName+"Dir_"+direction)
+        csvName = varName.split("_")[0]
+        csvExport(varDict[ii], csvName+ii+"_Dir_"+direction)
+    return varDict
+
+# Literature Data
+
+# =============================================================================
+# Planes 0 -> 4
+# Vertical Planes Varying the Y axis from Y = 0.30 to Y = 0.45
+# =============================================================================
+## RMean
+colNames = ['xx', 'yy', 'zz', 'xy', 'yz', 'xz']
+RMean_00_04_Dirx = varTreatment(uniqueRaw, RMean, colNames, 9,'x',
+                               'RMean_00_4_',2, 0, 4)
+RMean_00_04_Dirz = varTreatment(uniqueRaw, RMean, colNames, 9,'z',
+                               'RMean_00_4_',2, 0, 4)
+
+## UMean
+colNames = ['u', 'v', 'w']
+UMean_00_04_Dirx = varTreatment(uniqueRaw, UMean, colNames, 6,'x',
+                               'UMean_00_4_',2, 0, 4)
+UMean_00_04_Dirz = varTreatment(uniqueRaw, UMean, colNames, 6,'z',
+                               'UMean_00_4_',2, 0, 4)
+interfaceVel = varTreatment(['p00'], UMean, colNames, 6, 'None','UMean_p00_',
+                            2, 0, 0)
+interfaceVel = interfaceVel['p00'].v
+
+## lambVectorMean
+colNames = ['lambVectorMean_x', 'lambVectorMean_y', 'lambVectorMean_z']
+lambVectorMean_00_04_Dirx = varTreatment(uniqueRaw, lambVectorMean, colNames, 6,
+                                    'x','lambVectorMean_00_4_',3, 0, 4)
+lambVectorMean_00_04_Dirz = varTreatment(uniqueRaw, lambVectorMean, colNames,
+                                    6,'z','lambVectorMean_00_4_',2, 0, 4)
+
+## pMean
+colNames = ['pMean']
+pMean_00_04_Dirx = varTreatment(uniqueRaw, pMean, colNames, 4,'x',
+                               'pMean_00_4_',3, 0, 4)
+pMean_00_04_Dirz = varTreatment(uniqueRaw, pMean, colNames, 4,'z',
+                               'pMean_00_4_',2, 0, 4)
+
+## vorticityMean
+colNames = ['vorticityMean_x', 'vorticityMean_y', 'vorticityMean_z']
+vorticityMean_00_04_Dirx = varTreatment(uniqueRaw, vorticityMean, colNames, 6,
+                                  'x','vorticityMean_00_4_',3, 0, 4)
+vorticityMean_00_04_Dirz = varTreatment(uniqueRaw, vorticityMean, colNames, 6,
+                                  'z','vorticityMean_00_4_',2, 0, 4)
+
+# =============================================================================
+# Planes 5 -> 11
+# Vertical Planes Varying the X axis from X = 0.25 to X = 0.50
+# =============================================================================
+## RMean
+colNames = ['xx', 'yy', 'zz', 'xy', 'yz', 'xz']
+RMean_05_11_Diry = varTreatment(uniqueRaw, RMean, colNames, 9,'y',
+                                'RMean_05_11_',2, 5, 11)
+RMean_05_11_Dirz = varTreatment(uniqueRaw, RMean, colNames, 9,'z',
+                                'RMean_05_11_',2, 5, 11)
+
+## UMean
+colNames = ['u', 'v', 'w']
+UMean_05_11_Diry = varTreatment(uniqueRaw, UMean, colNames, 6,'y',
+                                'UMean_05_11_',2, 5, 11)
+UMean_05_11_Dirz = varTreatment(uniqueRaw, UMean, colNames, 6,'z',
+                                'UMean_05_11_',2, 5, 11)
+
+## lambVectorMean
+colNames = ['lambVectorMean_x', 'lambVectorMean_y', 'lambVectorMean_z']
+lambVectorMean_05_11_Diry = varTreatment(uniqueRaw, lambVectorMean, colNames, 6,
+                                    'y','lambVectorMean_05_11_',3, 5, 11)
+lambVectorMean_05_11_Dirz = varTreatment(uniqueRaw, lambVectorMean, colNames,
+                                    6,'z','lambVectorMean_05_11_',2, 5, 11)
+
+## pMean
+colNames = ['pMean']
+pMean_05_11_Diry = varTreatment(uniqueRaw, pMean, colNames, 4,'y',
+                                'pMean_05_11_',3, 5, 11)
+pMean_05_11_Dirz = varTreatment(uniqueRaw, pMean, colNames, 4,'z',
+                                'pMean_05_11_',2, 5, 11)
+
+## vorticityMean
+colNames = ['vorticityMean_x', 'vorticityMean_y', 'vorticityMean_z']
+vorticityMean_05_11_Diry = varTreatment(uniqueRaw, vorticityMean, colNames, 6,
+                                  'y','vorticityMean_05_11_',3, 5, 11)
+vorticityMean_05_11_Dirz = varTreatment(uniqueRaw, vorticityMean, colNames, 6,
+                                  'z','vorticityMean_05_11_',2, 5, 11)
+
+# =============================================================================
+# Planes 12 -> 21
+# Horizontal Planes Varying the Z axis from Z = 0 to Z = 0.10
+# =============================================================================
+## RMean
+colNames = ['xx', 'yy', 'zz', 'xy', 'yz', 'xz']
+RMean_12_21_Dirx = varTreatment(uniqueRaw, RMean, colNames, 9,'x',
+                                'RMean_12_21_',2, 12, 21)
+RMean_12_21_Diry = varTreatment(uniqueRaw, RMean, colNames, 9,'y',
+                                'RMean',2, 12, 21)
+
+## UMean
+colNames = ['u', 'v', 'w']
+UMean_12_21_Dirx = varTreatment(uniqueRaw, UMean, colNames, 6,'x',
+                                'UMean_12_21_',2, 12, 21)
+UMean_12_21_Diry = varTreatment(uniqueRaw, UMean, colNames, 6,'y',
+                                'UMean_12_21_',2, 12, 21)
+
+## lambVectorMean
+colNames = ['lambVectorMean_x', 'lambVectorMean_y', 'lambVectorMean_z']
+lambVectorMean_12_21_Dirx = varTreatment(uniqueRaw, lambVectorMean, colNames, 6,
+                                    'x','lambVectorMean_12_21_',3, 12, 21)
+lambVectorMean_12_21_Diry = varTreatment(uniqueRaw, lambVectorMean, colNames,
+                                    6,'y','lambVectorMean_12_21_',2, 12, 21)
+
+## pMean
+colNames = ['pMean']
+pMean_12_21_Dirx = varTreatment(uniqueRaw, pMean, colNames, 4,'x',
+                                'pMean_12_21_',3, 12, 21)
+pMean_12_21_Diry = varTreatment(uniqueRaw, pMean, colNames, 4,'y',
+                                'pMean_12_21_',2, 12, 21)
+
+## vorticityMean
+colNames = ['vorticityMean_x', 'vorticityMean_y', 'vorticityMean_z']
+vorticityMean_12_21_Dirx = varTreatment(uniqueRaw, vorticityMean, colNames, 6,
+                                  'x','vorticityMean_12_21_',3, 12, 21)
+vorticityMean_12_21_Diry = varTreatment(uniqueRaw, vorticityMean, colNames, 6,
+                                  'y','vorticityMean_5_11_',2, 12, 21)
+
+# =============================================================================
+# Validation Data
+# =============================================================================
+## Data Treatment
+colNames = ['u', 'v', 'w']
+fig4aOur = varTreatment(['p17'], UMean, colNames, 6, "y",'UMean_p17_',
+                            3, 17, 17)
+fig4aOur = fig4aOur['p17']
+fig4aOur.u = fig4aOur.u/U
+
+del UMean, lambVectorMean, pMean, RMean, vorticityMean, colNames
+
+\end{lstlisting}
+
+\subsection{mass.py}
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Mass quantities are analysed in two ways: by tracer volume and y-velocity
+"""
+
+# Libraries
+from datetime import datetime
+import numpy as np
+from scipy.optimize import curve_fit
+
+
+# Extracting date for report
+now = datetime.now()
+today = now.strftime("%d/%m/%Y %H:%M:%S")
+
+# Define Fitting Function
+def model(x, td):
+    """
+    First Order Mass Decay Equation
+    """
+    return np.exp(-x/td)
+
+td, pcov = curve_fit(model, tracerData.time, tracerData.tracerVol, p0=(120))
+
+k = W / (td * U)
+
+modelmass = model(tracerData.time, td)
+
+tdExp = massLiterature.iloc[1,1]
+
+tdRelError = ((td - tdExp)/tdExp)*100
+tdAbsError = tdExp - td
+
+kexp = W / (tdExp * U) # Non-dimensional experimental value
+kRelError = ((k - kexp)/kexp)*100
+kAbsError = kexp - k
+
+# Mass as function of velocity
+E = interfaceVel.apply(np.abs).mean()/2
+tdvel = W/E
+kvel = W / (tdvel * U)
+
+# Mass Summary
+file = open("preTreatment/results/massExchange.txt","w")
+file.write("Mass Exchange Values (Simulated - Tracer)\n")
+file.write("ktracer = %.4f\n" %k)
+file.write("Mean Residence Time = %.2f\n---\n" %td)
+file.write("Mass Exchange Values (Simulated - Interface Velocity)\n")
+file.write("kvelocity = %.4f\n" %kvel)
+file.write("Mean Residence Time = %.2f\n---\n" %tdvel)
+file.write("Mass Exchange Values (Xiang)\n")
+file.write("kexp = %.4f\n" %kexp)
+file.write("Mean Residence Time = %.2f\n---\n" %tdExp)
+file.write("Error analysis\n")
+file.write("Relative error\n")
+file.write("\tError = (Simulated.our - Xiang)/(Xiang)\n")
+file.write("MRT = %.2f %%\n" %tdRelError)
+file.write("k = %.2f %%\n" %kRelError)
+file.write("Absolute error\n")
+file.write("MRT = %.2f\n" %tdAbsError)
+file.write("k = %.2f\n" %kAbsError)
+file.write("---\nData analysed in {} (GMT-4)".format(today))
+file.close()
+
+del file, now, today, E
+\end{lstlisting}
+\subsection{plot.py}
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Data is imported from dataProcess.py and ploted into png figures
+"""
+
+# Libraries
+import re
+import matplotlib.pyplot as plt
+import pandas as pd
+from matplotlib.offsetbox import AnchoredText
+
+def plotVar(varName, axis, title, name, col, admensional, first, last):
+# =============================================================================
+#     Runs through all plots from a variable and plots it
+# =============================================================================
+    fig, ax = plt.subplots(figsize=(9,6), dpi=120)
+
+    for key, df in varName.items():
+        nKey = key
+        nKey = int(re.sub('\D', '',nKey))
+        if nKey >= first and nKey <= last:
+            if 'z' not in varName[key].iloc[:,0].name:
+                ax.plot(varName[key].iloc[:,0],
+                        varName[key].iloc[:,col]/admensional, label=key)
+            else:
+                ax.plot(varName[key].iloc[:,col]/admensional,
+                        varName[key].iloc[:,0], label=key)
+
+    ax.legend(loc='best',fontsize='x-large')
+
+    ax.set_title(title,fontsize='xx-large')
+
+    plt.grid()
+    plt.autoscale(enable=True, tight=True)
+    plt.xlabel(axis[0],fontsize='x-large')
+    plt.ylabel(axis[1],fontsize='x-large')
+    plt.savefig('preTreatment/results/Plot/'+name+'.png', bbox_inches='tight')
+
+# =============================================================================
+# Planes 0 -> 4
+# Vertical Planes Varying the Y axis from Y = 0.30 to Y = 0.45
+# =============================================================================
+## RMean Dir_x_00_04
+axisNames = ['(x-x0)/L',r'Rmag/U^2']
+plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical XZ planes'
+figureName = 'RMean_mag_Dir_x_00_04'
+plotVar(RMean_00_04_Dirx, axisNames, plotTitle, figureName, 7, U**2, 0, 4)
+
+## RMean Dir_x_00_04
+axisNames = [r'Rmag/U^2', 'z/H']
+plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical XZ planes'
+figureName = 'RMean_mag_Dir_x_00_04'
+plotVar(RMean_00_04_Dirz, axisNames, plotTitle, figureName, 7, U**2, 0, 4)
+
+## UMean Dir_x_00_04
+axisNames = ['(x-x0)/L','u/U']
+plotTitle = 'Time Averaged x-velocity at vertical XZ planes'
+figureName = 'UMean_U_Dir_x_00_04'
+plotVar(UMean_00_04_Dirx, axisNames, plotTitle, figureName, 1, U, 0, 4)
+
+axisNames = ['(x-x0)/L','v/U']
+plotTitle = 'Time Averaged y-velocity at vertical XZ planes'
+figureName = 'UMean_V_Dir_x_00_04'
+plotVar(UMean_00_04_Dirx, axisNames, plotTitle, figureName, 2, U, 0, 4)
+
+axisNames = ['(x-x0)/L','w/U']
+plotTitle = 'Time Averaged z-velocity at vertical XZ planes'
+figureName = 'UMean_W_Dir_x_00_04'
+plotVar(UMean_00_04_Dirx, axisNames, plotTitle, figureName, 3, U, 0, 4)
+
+axisNames = ['(x-x0)/L','uMag/U']
+plotTitle = 'Time Averaged velocity magnitude at vertical XZ planes'
+figureName = 'UMean_mag_Dir_x_00_04'
+plotVar(UMean_00_04_Dirx, axisNames, plotTitle, figureName, 4, U, 0, 4)
+
+## UMean Dir_z_00_04
+axisNames = ['u/U', 'z/H']
+plotTitle = 'Time Averaged x-velocity at vertical XZ planes'
+figureName = 'UMean_U_Dir_z_00_04'
+plotVar(UMean_00_04_Dirz, axisNames, plotTitle, figureName, 1, U, 0, 4)
+
+axisNames = ['v/U', 'z/H']
+plotTitle = 'Time Averaged y-velocity at vertical XZ planes'
+figureName = 'UMean_V_Dir_z_00_04'
+plotVar(UMean_00_04_Dirz, axisNames, plotTitle, figureName, 2, U, 0, 4)
+
+axisNames = ['w/U', 'z/H']
+plotTitle = 'Time Averaged z-velocity at vertical XZ planes'
+figureName = 'UMean_W_Dir_z_00_04'
+plotVar(UMean_00_04_Dirz, axisNames, plotTitle, figureName, 3, U, 0, 4)
+
+axisNames = ['uMag/U', 'z/H']
+plotTitle = 'Time Averaged velocity magnitude at vertical XZ planes'
+figureName = 'UMean_mag_Dir_z_00_04'
+plotVar(UMean_00_04_Dirz, axisNames, plotTitle, figureName, 4, U, 0, 4)
+
+## lambVectorMean Dir_x_00_04
+axisNames = ['(x-x0)/L','lambVectorMag/U']
+plotTitle = 'Time Averaged Lamb Vector magnitude at vertical XZ planes'
+figureName = 'lambVectorMean_mag_Dir_x_00_04'
+plotVar(lambVectorMean_00_04_Dirx, axisNames, plotTitle, figureName, 4, 1, 0, 4)
+
+## lambVectorMean Dir_z_00_04
+axisNames = ['lambVectorMean [m/s2]', 'z/H']
+plotTitle = 'Time Averaged Lamb Vector magnitude at vertical XZ planes'
+figureName = 'lambVectorMean_mag_Dir_z_00_04'
+plotVar(lambVectorMean_00_04_Dirz, axisNames, plotTitle, figureName, 4, 1, 0, 4)
+
+## pMean Dir_x_00_04
+axisNames = ['(x-x0)/L',r'(pL)/($\rho$ U)']
+plotTitle = 'Time Averaged Pressure at vertical XZ planes'
+figureName = 'pMean_Dir_x_00_04'
+plotVar(pMean_00_04_Dirx, axisNames, plotTitle, figureName, 1, L/(RHO*U), 0, 4)
+
+## pMean Dir_z_00_04
+axisNames = [r'(pL)/($\rho$ U)', 'z/H']
+plotTitle = 'Time Averaged Pressure at vertical XZ planes'
+figureName = 'pMean_Dir_z_00_04'
+plotVar(pMean_00_04_Dirz, axisNames, plotTitle, figureName, 1, L/(RHO*U), 0, 4)
+
+## vorticity Dir_x_00_04
+axisNames = ['(x-x0)/L','vorticity[1/s]']
+plotTitle = 'Time Averaged vorticity magnitude at vertical XZ planes'
+figureName = 'vorticity_Dir_x_00_04'
+plotVar(vorticityMean_00_04_Dirx, axisNames, plotTitle, figureName, 4, 1, 0, 4)
+
+## vorticity Dir_z_00_04
+axisNames = ['vorticity [1/s]', 'z/H']
+plotTitle = 'Time Averaged vorticity magnitude at vertical XZ planes'
+figureName = 'vorticity_Dir_z_00_04'
+plotVar(vorticityMean_00_04_Dirz, axisNames, plotTitle, figureName, 4, 1, 0, 4)
+
+# =============================================================================
+# Planes 5 -> 11
+# Vertical Planes Varying the X axis from X = 0.25 to X = 0.50
+# =============================================================================
+## RMean Dir_y_05_11
+axisNames = [r'Rmag/U^2', '(y-y0)/H']
+plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical YZ planes'
+figureName = 'RMean_mag_Dirx_05_11'
+plotVar(RMean_05_11_Diry, axisNames, plotTitle, figureName, 7, U**2, 5, 11)
+
+## RMean Dir_z_05_11
+axisNames = [r'Rmag/U^2', 'z/H']
+plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical YZ planes'
+figureName = 'RMean_mag_Dir_z_05_11'
+plotVar(RMean_05_11_Dirz, axisNames, plotTitle, figureName, 7, U**2, 5, 11)
+
+## UMean Dir_y_05_11
+axisNames = ['(y-y0)/H','u/U']
+plotTitle = 'Time Averaged x-velocity at vertical YZ planes'
+figureName = 'UMeanYZPlanes_U_Diry'
+plotVar(UMean_05_11_Diry, axisNames, plotTitle, figureName, 1, U, 5, 11)
+
+axisNames = ['(y-y0)/H','v/U']
+plotTitle = 'Time Averaged y-velocity at vertical YZ planes'
+figureName = 'UMeanYZPlanes_V_Diry'
+plotVar(UMean_05_11_Diry, axisNames, plotTitle, figureName, 2, U, 5, 11)
+
+axisNames = ['(y-y0)/H','w/U']
+plotTitle = 'Time Averaged z-velocity at vertical YZ planes'
+figureName = 'UMeanYZPlanes_W_Diry'
+plotVar(UMean_05_11_Diry, axisNames, plotTitle, figureName, 3, U, 5, 11)
+
+axisNames = ['(y-y0)/H','uMag/U']
+plotTitle = 'Time Averaged velocity magnitude at vertical YZ planes'
+figureName = 'UMeanYZPlanes_mag_Diry'
+plotVar(UMean_05_11_Diry, axisNames, plotTitle, figureName, 4, U, 5, 11)
+
+## UMean Dir_z_05_11
+axisNames = ['u/U', 'z/H']
+plotTitle = 'Time Averaged x-velocity at vertical YZ planes'
+figureName = 'UMeanYZPlanes_U_Dirz'
+plotVar(UMean_05_11_Dirz, axisNames, plotTitle, figureName, 1, U, 5, 11)
+
+axisNames = ['v/U', 'z/H']
+plotTitle = 'Time Averaged y-velocity at vertical YZ planes'
+figureName = 'UMeanYZPlanes_V_Dirz'
+plotVar(UMean_05_11_Dirz, axisNames, plotTitle, figureName, 2, U, 5, 11)
+
+axisNames = ['w/U', 'z/H']
+plotTitle = 'Time Averaged z-velocity at vertical YZ planes'
+figureName = 'UMeanYZPlanes_W_Dirz'
+plotVar(UMean_05_11_Dirz, axisNames, plotTitle, figureName, 3, U, 5, 11)
+
+axisNames = ['uMag/U', 'z/H']
+plotTitle = 'Time Averaged velocity magnitude at vertical YZ planes'
+figureName = 'UMeanYZPlanes_mag_Dirz'
+plotVar(UMean_05_11_Dirz, axisNames, plotTitle, figureName, 4, U, 5, 11)
+
+## lambVectorMean Dir_y_05_11
+axisNames = ['(x-x0)/L','lambVectorMag/U']
+plotTitle = 'Time Averaged Lamb Vector magnitude at vertical YZ planes'
+figureName = 'lambVectorMean_mag_Dir_y_05_11'
+plotVar(lambVectorMean_05_11_Diry, axisNames, plotTitle, figureName, 4, 1, 5, 11)
+
+## lambVectorMean Dir_z_05_11
+axisNames = ['lambVectorMean [m/s2]', 'z/H']
+plotTitle = 'Time Averaged Lamb Vector magnitude at vertical YZ planes'
+figureName = 'lambVectorMean_mag_Dir_z_05_11'
+plotVar(lambVectorMean_05_11_Dirz, axisNames, plotTitle, figureName, 4, 1, 5, 11)
+
+## pMean Dir_y_05_11
+axisNames = ['(x-x0)/L',r'(pL)/($\rho$ U)']
+plotTitle = 'Time Averaged Pressure at vertical YZ planes'
+figureName = 'pMean_Dir_y_05_11'
+plotVar(pMean_05_11_Diry, axisNames, plotTitle, figureName, 1, L/(RHO*U), 5, 11)
+
+## pMean Dir_z_05_11
+axisNames = [r'(pL)/($\rho$ U)', 'z/H']
+plotTitle = 'Time Averaged Pressure at vertical YZ planes'
+figureName = 'pMean_Dir_z_05_11'
+plotVar(pMean_05_11_Dirz, axisNames, plotTitle, figureName, 1, L/(RHO*U), 5, 11)
+
+## vorticity Dir_y_05_11
+axisNames = ['(x-x0)/L','vorticity[1/s]']
+plotTitle = 'Time Averaged vorticity magnitude at vertical YZ planes'
+figureName = 'vorticity_Dir_y_05_11'
+plotVar(vorticityMean_05_11_Diry, axisNames, plotTitle, figureName, 4, 1, 5, 11)
+
+## vorticity Dir_z_05_11
+axisNames = ['vorticity [1/s]', 'z/H']
+plotTitle = 'Time Averaged vorticity magnitude at vertical YZ planes'
+figureName = 'vorticity_Dir_z_05_11'
+plotVar(vorticityMean_05_11_Dirz, axisNames, plotTitle, figureName, 4, 1, 5, 11)
+
+
+# =============================================================================
+# Planes 12 -> 21
+# Horizontal Planes Varying the Z axis from Z = 0 to Z = 0.10
+# =============================================================================
+## RMean Dir_x_12_21
+axisNames = ['(x-x0)/L', r'Rmag/U^2']
+plotTitle = 'Time Averaged Reynolds Stresses Magnitude at horizontal XY planes'
+figureName = 'RMean_mag_Dir_x_12_21'
+plotVar(RMean_12_21_Dirx, axisNames, plotTitle, figureName, 7, U**2, 12, 21)
+
+## RMean Dir_y_12_21
+axisNames = ['(y-y0)/H', r'Rmag/U^2']
+plotTitle = 'Time Averaged Reynolds Stresses Magnitude at horizontal XY planes'
+figureName = 'RMean_mag_Dir_y_12_21'
+plotVar(RMean_12_21_Diry, axisNames, plotTitle, figureName, 7, U**2, 12, 21)
+
+## UMean Dir_x_12_21
+axisNames = ['(x-x0)/L','u/U']
+plotTitle = 'Time Averaged x-velocity at horizontal XY planes'
+figureName = 'UMean_U_Dir_x_12_21'
+plotVar(UMean_12_21_Dirx, axisNames, plotTitle, figureName, 1, U, 12, 21)
+
+axisNames = ['(x-x0)/L','v/U']
+plotTitle = 'Time Averaged y-velocity at horizontal XY planes'
+figureName = 'UMean_V_Dir_x_12_21'
+plotVar(UMean_12_21_Dirx, axisNames, plotTitle, figureName, 2, U, 12, 21)
+
+axisNames = ['(x-x0)/L','w/U']
+plotTitle = 'Time Averaged z-velocity at horizontal XY planes'
+figureName = 'UMean_W_Dir_x_12_21'
+plotVar(UMean_12_21_Dirx, axisNames, plotTitle, figureName, 3, U, 12, 21)
+
+axisNames = ['(x-x0)/L','uMag/U']
+plotTitle = 'Time Averaged velocity magnitude at horizontal XY planes'
+figureName = 'UMean_mag_Dir_x_12_21'
+plotVar(UMean_12_21_Dirx, axisNames, plotTitle, figureName, 4, U, 12, 21)
+
+## UMean Dir_y_12_21
+axisNames = ['(y-y0)/H','u/U']
+plotTitle = 'Time Averaged x-velocity at horizontal XY planes'
+figureName = 'UMean_U_Dir_y_12_21'
+plotVar(UMean_12_21_Diry, axisNames, plotTitle, figureName, 1, U, 12, 21)
+
+axisNames = ['(y-y0)/H','v/U']
+plotTitle = 'Time Averaged y-velocity at horizontal XY planes'
+figureName = 'UMean_V_Dir_y_12_21'
+plotVar(UMean_12_21_Diry, axisNames, plotTitle, figureName, 2, U, 12, 21)
+
+axisNames = ['(y-y0)/H','w/U']
+plotTitle = 'Time Averaged z-velocity at horizontal XY planes'
+figureName = 'UMean_W_Dir_y_12_21'
+plotVar(UMean_12_21_Diry, axisNames, plotTitle, figureName, 3, U, 12, 21)
+
+axisNames = ['(y-y0)/H','uMag/U']
+plotTitle = 'Time Averaged velocity magnitude at horizontal XY planes'
+figureName = 'UMean_mag_Dir_y_12_21'
+plotVar(UMean_12_21_Diry, axisNames, plotTitle, figureName, 4, U, 12, 21)
+
+## lambVectorMean Dir_y_12_21
+axisNames = ['(x-x0)/L','lambVectorMag/U']
+plotTitle = 'Time Averaged Lamb Vector magnitude at horizontal XY planes'
+figureName = 'lambVectorMean_mag_Dir_y_12_21'
+plotVar(lambVectorMean_12_21_Diry, axisNames, plotTitle, figureName, 4, 1, 12, 21)
+
+## lambVectorMean Dir_z_12_21
+axisNames = ['lambVectorMean [m/s2]', 'z/H']
+plotTitle = 'Time Averaged Lamb Vector magnitude at horizontal XY planes'
+figureName = 'lambVectorMean_mag_Dir_z_12_21'
+plotVar(lambVectorMean_12_21_Diry, axisNames, plotTitle, figureName, 4, 1, 12, 21)
+
+## pMean Dir_y_12_21
+axisNames = ['(x-x0)/L',r'(pL)/($\rho$ U)']
+plotTitle = 'Time Averaged Pressure at horizontal XY planes'
+figureName = 'pMean_Dir_y_12_21'
+plotVar(pMean_12_21_Diry, axisNames, plotTitle, figureName, 1, L/(RHO*U), 12, 21)
+
+## pMean Dir_z_12_21
+axisNames = [r'(pL)/($\rho$ U)', 'z/H']
+plotTitle = 'Time Averaged Pressure at horizontal XY planes'
+figureName = 'pMean_Dir_z_12_21'
+plotVar(pMean_12_21_Diry, axisNames, plotTitle, figureName, 1, L/(RHO*U), 12, 21)
+
+## vorticity Dir_y_12_21
+axisNames = ['(x-x0)/L','vorticity[1/s]']
+plotTitle = 'Time Averaged vorticity magnitude at horizontal XY planes'
+figureName = 'vorticity_Dir_y_12_21'
+plotVar(vorticityMean_12_21_Diry, axisNames, plotTitle, figureName, 4, 1, 12, 21)
+
+## vorticity Dir_z_12_21
+axisNames = ['vorticity [1/s]', 'z/H']
+plotTitle = 'Time Averaged vorticity magnitude at horizontal XY planes'
+figureName = 'vorticity_Dir_z_12_21'
+plotVar(vorticityMean_12_21_Diry, axisNames, plotTitle, figureName, 4, 1, 12, 21)
+
+# =============================================================================
+# Validation Graph
+# =============================================================================
+
+# Figure 4
+fig4, ax4 = plt.subplots(figsize=(9,6), dpi=120)
+ax4.plot(literatureExp.iloc[:,0], literatureExp.iloc[:,1],'k.',
+         label='Experimental')
+ax4.plot(literatureLES.iloc[:,0], literatureLES.iloc[:,1],
+         label='Xiang et al. (2019)')
+ax4.plot(fig4aOur.iloc[:,0], fig4aOur.u,label='Our')
+
+ax4.legend(loc='best',fontsize='x-large')
+
+ax4.set_title('Time Averaged x-velocity at 0.6H'
+             ,fontsize='xx-large')
+
+plt.grid()
+plt.autoscale(enable=True, tight=True)
+plt.xlabel('(y-y0)/H',fontsize='x-large')
+plt.ylabel('u/U',fontsize='x-large')
+plt.savefig('preTreatment/results/Plot/figure4.png', bbox_inches='tight')
+
+# Mass Decay
+figm, axm = plt.subplots(figsize=(9,6), dpi=120)
+axm.plot(tracerData.time,modelmass,label='Fitted Curve',color='r')
+axm.plot(tracerData.time,tracerData.tracerVol,label='Numerical')
+
+axm.legend(loc='best',fontsize='x-large')
+
+axm.set_title('Mass Ejection from Groyne Field Volume'
+             ,fontsize='xx-large')
+
+at = AnchoredText('C(t)=$C_{0}$$e^{-t/Td}$\n$k_{ajusted}$ = %.4f' % k,
+                  prop=dict(size=15), frameon=True,
+                  loc='lower left')
+axm.add_artist(at)
+
+#axm.set_yscale('log')
+plt.autoscale(enable=True, tight=True)
+plt.grid()
+plt.xlabel('t [s]',fontsize='x-large')
+plt.ylabel('Concentration [non-dimensional]',fontsize='x-large')
+plt.savefig('preTreatment/results/Plot/massDecay.png', bbox_inches='tight')
+
+del figm, axm, at, fig4, ax4, axisNames, plotTitle, figureName
+
+\end{lstlisting}
+\section{dataAnalysis Scripts}
+\subsection{multipleSimulationImport.py}
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Libraries
+import os
+import re
+import pandas as pd
+
+files = os.listdir('treatment')
+
+# Check for csv files
+csvFiles = list()
+for item in files:
+    if re.search('.\.csv', item):
+        csvFiles.append(item)
+
+# Check for txt files
+txtFiles = list()
+for item in files:
+    if re.search('.\.txt', item):
+        txtFiles.append(item)
+
+# Import generated data
+for item in csvFiles:
+    if re.search('.horizontalVelocity.', item):
+        aux = pd.read_csv('treatment/'+item, header=0, usecols=['Y','UMean'])
+        try:
+            horizontalVelocity = pd.concat([horizontalVelocity,aux],
+                                           ignore_index=True, axis=1)
+            hVelFiles.append(item)
+        except:
+            horizontalVelocity = aux
+            hVelFiles = [item]
+            
+    elif re.search('.interfaceVelocity.', item):
+        aux = pd.read_csv('treatment/'+item, header=0, usecols=['X','UMean'])
+        try:
+            interfaceVelocity = pd.concat([interfaceVelocity,aux],
+                                          ignore_index=True, axis=1)
+            iVelFiles.append(item)
+        except:
+            interfaceVelocity = aux
+            iVelFiles = [item]
+
+for item in txtFiles:
+    file = open('treatment/'+item, "r")
+    for line in file:
+        if re.search('ktracer.', line):
+            words = line.split()
+            ktracer = float(words[2])
+            continue
+        elif re.search('kvelocity.', line):
+            words = line.split()
+            kvelocity = float(words[2])
+
+    d = {'Simulation':[item[0:4]], 'kTracer':[ktracer], 'kVelocity':[kvelocity]}
+    df = pd.DataFrame(data=d)
+    
+    try:
+        massExchange = massExchange.append(df, ignore_index=True)
+    except:
+        massExchange = df
+
+
+del aux, files, item, d, df, iVelFiles,hVelFiles, txtFiles, words, line, file
+del ktracer, kvelocity, csvFiles
+\end{lstlisting}
+\subsection{multipleSimulationProcess.py}
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import pandas as pd
+
+# Append densities to mass exchange
+densities = pd.read_csv('treatment/densities.csv')
+densities = densities.set_index('Simulation')
+massExchange = massExchange.set_index('Simulation', drop=False)
+massExchange = massExchange.join(densities)
+
+# Retrieve mean residence time
+tTracer = 1/massExchange.kTracer
+tVelocity = 1/massExchange.kVelocity
+
+massExchange['tTracer'] = tTracer
+massExchange['tVelocity'] = tVelocity
+
+massExchange = massExchange[['Simulation', 'Densities', 'kTracer', 'kVelocity',
+                               'tTracer', 'tVelocity']]
+
+del tTracer, tVelocity
+\end{lstlisting}
+\subsection{multipleSimulationPlot.py}
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+# Horizontal Velocity
+fig, ax = plt.subplots(figsize=(9,6), dpi=120)
+
+for line in range(0, len(horizontalVelocity.columns),2):
+    try:
+        i += 1
+    except:
+        i = 0
+    ax.plot(horizontalVelocity[line],horizontalVelocity[line+1],
+            label=massExchange.Simulation[i])
+    
+ax.legend(loc='best',fontsize='x-large')
+
+ax.set_title('Time Averaged x-velocity at 0.6H'
+             ,fontsize='xx-large')
+
+plt.grid()
+plt.autoscale(enable=True, tight=True)
+plt.xlabel('(y-y0)/H',fontsize='x-large')
+plt.ylabel('u/U',fontsize='x-large')
+plt.savefig('treatment/results/horizontalVelocity.png')
+del fig, ax, i, line
+
+## Save processed data into csv
+horizontalVelocity.to_csv('treatment/results/horizontalVelocity.csv', index=False)
+
+# Interface Velocity
+fig, ax = plt.subplots(figsize=(9,6), dpi=120)
+
+for line in range(0, len(interfaceVelocity.columns),2):
+    try:
+        i += 1
+    except:
+        i = 0
+    ax.plot(interfaceVelocity[line],interfaceVelocity[line+1],
+            label=massExchange.Simulation[i])
+    
+ax.legend(loc='best',fontsize='x-large')
+
+ax.set_title('Time Averaged y-velocity at the Interface with the Main Channel'
+             ,fontsize='xx-large')
+
+plt.grid()
+plt.autoscale(enable=True, tight=True)
+plt.xlabel('x/L',fontsize='x-large')
+plt.ylabel('v/U',fontsize='x-large')
+plt.savefig('treatment/results/interfaceVelocity.png')
+del fig, ax, i, line
+
+## Save processed data into csv
+interfaceVelocity.to_csv('treatment/results/interfaceVelocity.csv', index=False)
+
+# Mass Exchange
+massExchange = massExchange.set_index('Densities', drop=False)
+massExchange = massExchange.sort_values(by='kTracer', ascending=False)
+
+fig, ax = plt.subplots(figsize=(9,6), dpi=120)
+ax.plot(massExchange.index,massExchange.kTracer, '^', label='Tracer')
+ax.plot(massExchange.index,massExchange.kVelocity,'o',
+        label='Interface Velocity')
+
+ax.legend(loc='best',fontsize='x-large')
+
+ax.set_title('Mass Exchange Coefficients versus Vegetation Density'
+             ,fontsize='xx-large')
+
+plt.grid()
+plt.autoscale(enable=True)
+plt.xlabel('Vegetation Density',fontsize='x-large')
+plt.ylabel('Mass Exchange Coefficient (k)',fontsize='x-large')
+plt.savefig('treatment/results/massExchange.png')
+del fig, ax
+
+## Save processed data into csv
+massExchange = massExchange.set_index('Simulation')
+massExchange.to_csv('treatment/results/massExchange.csv')
+
+# Residence Time
+fig, ax = plt.subplots(figsize=(9,6), dpi=120)
+ax.plot(massExchange.Densities,massExchange.tTracer, '^',label='Tracer')
+ax.plot(massExchange.Densities,massExchange.tVelocity, 'o',
+        label='Interface Velocity')
+
+ax.legend(loc='best',fontsize='x-large')
+
+ax.set_title('Mean Residence Time versus Vegetation Density'
+             ,fontsize='xx-large')
+
+plt.grid()
+plt.autoscale(enable=True)
+plt.xlabel('Vegetation Density',fontsize='x-large')
+plt.ylabel('Mean Residence Time [s]',fontsize='x-large')
+plt.savefig('treatment/results/meanResidenceTime.png')
+del fig, ax
+
+# k versus k
+fig, ax = plt.subplots(figsize=(9,6), dpi=120)
+ax.plot(massExchange.kVelocity,massExchange.kTracer, '^')
+
+x = np.linspace(*ax.get_xlim())
+ax.plot(x, x,'k')
+
+plt.grid()
+plt.autoscale(enable=True)
+plt.xlabel('kVelocity',fontsize='x-large')
+plt.ylabel('kTracer',fontsize='x-large')
+plt.savefig('treatment/results/KvsK.png')
+del fig, ax
+\end{lstlisting}
+\end{document}

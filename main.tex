@@ -1,0 +1,55 @@
+\documentclass[a4paper,12pt]{report}
+\usepackage{style}
+
+\begin{document}
+\maketitle
+\newpage
+
+\import{preTexto/}{coverPage.tex}
+
+\chapter*{Abstract}
+\pagenumbering{roman}
+\import{preTexto/}{abstract.tex}
+
+\chapter*{Dedication}
+\import{preTexto/}{dedication.tex}
+
+\chapter*{Declaration}
+\import{preTexto/}{declaration.tex}
+
+\chapter*{Acknowledgements}
+\import{preTexto/}{acknowledgements.tex}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\chapter{Introduction}
+\label{chap:introduction}
+\pagenumbering{arabic}% Arabic page numbers (and reset to 1)
+\subfile{texto/01-introduction.tex}
+
+\chapter{Methods}
+\label{chap:methods}
+\subfile{texto/02-methods.tex}
+
+\chapter{Results and Discussion}
+\label{chap:resultsDiscussion}
+
+\chapter{Conclusion}
+\label{chap:conclusion}
+
+\printbibliography[heading=bibintoc, title={References}]
+
+\begin{appendices}
+\chapter{Grid Convergence Index (GCI) Python Script}
+\label{chap:appendixA}
+\subfile{posTexto/appendixA.tex}
+\chapter{Total Turbulent Kinetic Energy Function}
+\label{chap:appendixB}
+\subfile{posTexto/appendixB.tex}
+\chapter{Data Processing}
+\label{chap:appendixC}
+\subfile{posTexto/appendixC.tex}
+\end{appendices}
+\end{document}

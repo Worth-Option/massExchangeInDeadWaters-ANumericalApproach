@@ -1,0 +1,253 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+\noindent
+In this appendix the script used to determine the grid convergence index is presented. This code is an automated script based on \textcite{celik2008}.
+\section{File Structure}
+\noindent
+The file structure of the script is shown bellow:
+\\
+\dirtree{%
+.1 /.
+.2 bin.
+.3 import.py\DTcomment{CSV import script}.
+.3 gci.py\DTcomment{Data analysis script}.
+.3 plot.py\DTcomment{Plotting and export script}.
+.2 treatment\DTcomment{User Created Directory}.
+.3 results\DTcomment{Software Created Directory}.
+.2 main.py.
+}
+\noindent
+The requirements of the script are:
+\begin{itemize}
+\item Python 3.x
+\item Scipy
+\item Numpy
+\item Pandas
+\item Matplotlib
+\end{itemize}
+\section{main.py}
+The user must provide a folder named treatment where three different \textit{csv} files must be placed. The execution of the code depends only on the main.py file that must be run in a python terminal:
+
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import os
+
+def cls():
+    os.system('cls' if os.name=='nt' else 'clear')
+
+# Create Results Folder
+if not os.path.exists('treatment/results'):
+    os.makedirs('treatment/results')
+
+# Import CSV
+exec(open("bin/import.py").read());
+cls()
+print('Variables imported...')
+
+# Grid Convergence Analysis
+exec(open("bin/gci.py").read());
+cls()
+print('Grid convergence analysis performed...')
+
+# Plot data with error bars
+exec(open("bin/plot.py").read());
+cls()
+print('All done.')
+\end{lstlisting}
+\section{import.py}
+The import process occurs in bin/import.py file:
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Libraries
+import pandas as pd
+
+# Input delimeter and file names
+coarserFile = input("Name of coarser mesh file: ")
+mediumFile = input("Name of medium mesh file: ")
+finerFile = input("Name of finer mesh file: ")
+
+coarserFile = "treatment/" + coarserFile
+mediumFile = "treatment/" + mediumFile
+finerFile = "treatment/" + finerFile
+
+delim = input("Type of delimiter\n[1] ('\\t')\n[2] (' ')\n[3] (';')\n[4] (',')\nChosen option: ")
+delim = int(delim)
+if delim == 1:
+    delim = '\\t'
+elif delim == 2:
+    delim = ' '
+elif delim == 3:
+    delim = ';'
+elif delim == 4:
+    delim = ','
+
+axis = int(input("Axis column number: "))
+var = int(input("Variable column number: "))
+
+headerlines = int(input("Number of header lines: "))
+
+# Import generated data
+coarser = pd.read_csv(coarserFile,delimiter=delim, skiprows=headerlines,
+                      usecols=[axis,var], header=0,
+                      names=["Axis","Variable_coarser"])
+medium = pd.read_csv(mediumFile,delimiter=delim, skiprows=headerlines,
+                      usecols=[axis,var], header=0,
+                      names=["Axis","Variable_medium"])
+finer = pd.read_csv(finerFile,delimiter=delim, skiprows=headerlines,
+                      usecols=[axis,var], header=0,
+                      names=["Axis","Variable_finer"])
+
+# Reindexing using axis
+coarser = coarser.set_index('Axis')
+medium = medium.set_index('Axis')
+finer = finer.set_index('Axis')
+
+# Sorting imported data
+coarser = coarser.sort_values('Axis')
+medium = medium.sort_values('Axis')
+finer = finer.sort_values('Axis')
+\end{lstlisting}
+\section{gci.py}
+The processing occurs in bin/gci.py file:
+
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import pandas as pd
+import numpy as np
+from scipy import optimize
+
+cElements = int(input("Number of elements of the coarser mesh: "))
+mElements = int(input("Number of elements of the medium mesh: "))
+fElements = int(input("Number of elements of the finer mesh: "))
+
+analysisType = input("Type of Analysis\n[1] 2D\n[2] 3D\nChosen Option: ")
+volume = float(input("Total cell volume [m3]: "))
+
+if analysisType == '1':
+	h1 = (volume/fElements)**(0.5)
+	h2 = (volume/mElements)**(0.5)
+	h3 = (volume/cElements)**(0.5)
+	
+elif analysisType == '2':
+	h1 = (volume/fElements)**(1/3)
+	h2 = (volume/mElements)**(1/3)
+	h3 = (volume/cElements)**(1/3)
+	
+else:
+	cls()
+	print("Deleting all data...")
+	print("Computer shutting down...")
+
+# Refinement rate
+
+r21 = h2/h1
+r32 = h3/h2
+
+# Variable absolute error
+desiredVar = pd.concat([finer, medium, coarser], axis=1)
+desiredVar = desiredVar.interpolate('index').reindex(medium.index)
+e21 = desiredVar.Variable_medium - desiredVar.Variable_finer
+e32 = desiredVar.Variable_coarser - desiredVar.Variable_medium
+desiredVar['e21'] = e21
+desiredVar['e32'] = e32
+desiredVar = desiredVar.dropna()
+
+# Sign
+sign = np.sign(desiredVar['e32']/desiredVar['e21'])
+desiredVar['Sign'] = sign.astype(float)
+
+# Order Error
+initial = np.repeat(2.0, len(desiredVar.index))
+
+def aparentOrder(order, df):
+    order = np.abs(order)
+    q = np.log(((r21**order)-desiredVar.Sign)/((r32**order)-desiredVar.Sign))
+    ap = np.abs(np.log(np.abs(desiredVar['e32']/desiredVar['e21'])+q))/np.log(r21)
+    error = np.abs(order - ap)
+    error = np.array(error.values.tolist()) #converts to array
+    return np.mean(error)
+
+res = optimize.minimize(aparentOrder, args=(desiredVar),
+                        x0=initial, method = 'Nelder-Mead', tol=0.01,
+                        options={'maxiter':1000})
+
+order = res.x
+q = np.log((r21**order-desiredVar.Sign)/(r32**order-desiredVar.Sign))
+ap = np.abs(np.log(np.abs(desiredVar['e32']/desiredVar['e21'])+q))/np.log(r21)
+orderError = order - ap
+
+desiredVar['Aparent Order'] = ap
+desiredVar['Optimized Order'] = order
+desiredVar['Order Error'] = orderError
+
+# Extrapolated values
+ext21 = ((r21**ap)*desiredVar.Variable_finer-desiredVar.Variable_medium)/((r21**ap)-1)
+ext32 = ((r32**ap)*desiredVar.Variable_medium-desiredVar.Variable_coarser)/((r32**ap)-1)
+
+desiredVar['Extrapolated Value (Finer, Medium)'] = ext21
+desiredVar['Extrapolated Value (Medium, Coarser)'] = ext32
+
+# Calculate and report the error estimatives
+apxRelErr = np.abs((desiredVar.Variable_finer-desiredVar.Variable_medium)/desiredVar.Variable_finer)
+extRelErr = np.abs((ext21-desiredVar.Variable_finer)/ext21)
+gci = (1.25*apxRelErr)/((r21**ap)-1)
+
+desiredVar['Aproximated Relative Error'] = apxRelErr
+desiredVar['Extrapolated Relative Error'] = extRelErr
+desiredVar['Grid Convergence Index'] = gci
+
+# Export generated table
+desiredVar.to_excel("treatment/results/gci.xlsx")  
+\end{lstlisting}
+\section{plot.py}
+And finally the ploting and the spreadsheet containing the results are output by bin/plot.py file: 
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(9,6), dpi=300)
+ax.plot(desiredVar.index, desiredVar.Variable_coarser,
+            label= 'Coarser', aa=True)
+ax.plot(desiredVar.index, desiredVar.Variable_medium,
+            label= 'Medium', aa=True)
+ax.plot(desiredVar.index, desiredVar.Variable_finer,
+            label= 'Finer', aa=True)
+
+ax.legend(loc='best',fontsize='x-large')
+
+plt.grid()
+plt.autoscale(enable=True, tight=True)
+plt.savefig('treatment/results/allMeshes.png')
+
+fig, ax = plt.subplots(figsize=(9,6), dpi=300)
+ax.errorbar(desiredVar.index, desiredVar.Variable_medium,
+            gci*desiredVar.Variable_medium,
+            errorevery = 5, elinewidth = 1,
+            uplims = True, lolims = True, 
+            lw=1.5, aa = True)
+
+plt.grid()
+plt.autoscale(enable=True, tight=True)
+plt.savefig('treatment/results/mediumWithErrorbars.png')
+
+fig, ax = plt.subplots(figsize=(9,6), dpi=300)
+ax.errorbar(desiredVar.index, desiredVar.Variable_finer,
+            gci*desiredVar.Variable_finer,
+            errorevery = 5, elinewidth = 1,
+            uplims = True, lolims = True, 
+            lw=1.5, aa = True)
+
+plt.grid()
+plt.autoscale(enable=True, tight=True)
+plt.savefig('treatment/results/finerWithErrorbars.png')
+\end{lstlisting}
+\end{document}

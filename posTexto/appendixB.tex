@@ -1,0 +1,108 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+As the default function to write the TKE values does not account for the instantaneous values generated from the LES model, a new function was written to account both the instantaneous and averaged values. The code of the function totalTKE calculates the TKE based on the Resolved Reynolds Stress Tensor took from the instantaneous fluctuation of the velocity ($u'$) and the Subgrid Reynolds Stress Tensor ($R$).
+\begin{equation}
+totalTKE= 0.5tr(R) + 0.5tr(u')
+\end{equation}
+\begin{lstlisting}
+totalTKE
+{
+	type			coded;
+	libs			("libutilityFunctionObjects.so");
+	name			totalTKE;
+	executeControl	timeStep;
+	writeControl	writeTime;
+	timeStart		155;
+	// timeEnd		0;
+	enabled			true;
+
+/*---------------------------------------------------------------------------*\
+
+	Total Turbulent Kinect Energy Evaluation
+		** Requires fieldAverage Function to Obtain UPrime2Mean**
+			** Resolved Reynolds Stress Tensor
+		** Requires turbulenceFields Function to Obtain R**
+			** Subgrid Reynolds Stress Tensor
+
+\*---------------------------------------------------------------------------*/
+
+	codeExecute
+	#{
+		static autoPtr<volScalarField> totalTKE;
+
+		if
+		(
+			mesh().foundObject<volSymmTensorField>("UPrime2Mean")
+			&&
+			mesh().foundObject<volSymmTensorField>("turbulenceProperties:R")
+			&&
+			mesh().foundObject<volScalarField>("totalTKE") == 0
+		)
+		{
+			Info << "Turbulent Kinect Energy:" << endl;
+			Info << "	Initialising" << endl;
+			Info << "	Calculating" << nl << endl;
+
+			totalTKE.set
+			(
+				new volScalarField
+				(
+					IOobject
+					(
+						"totalTKE",
+						mesh().time().timeName(),
+						mesh(),
+						IOobject::NO_READ,
+						IOobject::AUTO_WRITE
+					),
+					mesh(),
+					dimensionedScalar
+					(
+						"totalTKE",
+						dimensionSet(0,2,-2,0,0,0,0),
+						0
+					)
+				)
+			);
+
+			const volSymmTensorField& R = mesh().lookupObjectRef<volSymmTensorField>("turbulenceProperties:R");
+			const volSymmTensorField& UPrime2Mean = mesh().lookupObjectRef<volSymmTensorField>("UPrime2Mean");
+
+			volScalarField& totalTKE = mesh().lookupObjectRef<volScalarField>("totalTKE");
+			totalTKE = (0.5 * tr(R)) + (0.5 * tr(UPrime2Mean));
+			totalTKE.write();
+		}
+
+		else if
+		(
+			mesh().foundObject<volSymmTensorField>("UPrime2Mean")
+			&&
+			mesh().foundObject<volSymmTensorField>("turbulenceProperties:R")
+			&&
+			mesh().foundObject<volScalarField>("totalTKE")
+		)
+		{
+			Info << "Turbulent Kinect Energy:" << endl;
+			Info << "	Calculating" << nl << endl;
+
+			const volSymmTensorField& R = mesh().lookupObjectRef<volSymmTensorField>("turbulenceProperties:R");
+			const volSymmTensorField& UPrime2Mean = mesh().lookupObjectRef<volSymmTensorField>("UPrime2Mean");
+
+			volScalarField& totalTKE = mesh().lookupObjectRef<volScalarField>("totalTKE");
+			totalTKE = (0.5 * tr(R)) + (0.5 * tr(UPrime2Mean));
+			totalTKE.write();
+		}
+
+		else
+		{
+			Info << "Turbulent Kinect Energy:" << endl;
+			Warning << endl
+					<< "	Unable to Calculate Turbulent Kinect Energy" << endl
+					<< "	UPrime2Mean and/or R Unavailable" << endl
+					<< "	Enable fieldAverage and turbulenceFields Functions" << nl << endl;
+		}
+	#};
+}
+\end{lstlisting}
+\end{document}

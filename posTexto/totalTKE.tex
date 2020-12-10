@@ -1,6 +1,3 @@
-\documentclass[../main.tex]{subfiles}
-
-\begin{document}
 As the default function to write the TKE values does not account for the instantaneous values generated from the LES model, a new function was written to account both the instantaneous and averaged values. The code of the function totalTKE calculates the TKE based on the Resolved Reynolds Stress Tensor took from the instantaneous fluctuation of the velocity ($u'$) and the Subgrid Reynolds Stress Tensor ($R$).
 \begin{equation}
 totalTKE= 0.5tr(R) + 0.5tr(u')
@@ -14,7 +11,6 @@ totalTKE
 	executeControl	timeStep;
 	writeControl	writeTime;
 	timeStart		155;
-	// timeEnd		0;
 	enabled			true;
 
 /*---------------------------------------------------------------------------*\
@@ -71,7 +67,6 @@ totalTKE
 
 			volScalarField& totalTKE = mesh().lookupObjectRef<volScalarField>("totalTKE");
 			totalTKE = (0.5 * tr(R)) + (0.5 * tr(UPrime2Mean));
-			totalTKE.write();
 		}
 
 		else if
@@ -91,7 +86,6 @@ totalTKE
 
 			volScalarField& totalTKE = mesh().lookupObjectRef<volScalarField>("totalTKE");
 			totalTKE = (0.5 * tr(R)) + (0.5 * tr(UPrime2Mean));
-			totalTKE.write();
 		}
 
 		else
@@ -105,4 +99,3 @@ totalTKE
 	#};
 }
 \end{lstlisting}
-\end{document}

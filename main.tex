@@ -5,51 +5,37 @@
 \maketitle
 \newpage
 
-\import{preTexto/}{coverPage.tex}
-
-\chapter*{Abstract}
-\pagenumbering{roman}
-\import{preTexto/}{abstract.tex}
-
-\chapter*{Dedication}
-\import{preTexto/}{dedication.tex}
-
-\chapter*{Declaration}
-\import{preTexto/}{declaration.tex}
-
-\chapter*{Acknowledgements}
-\import{preTexto/}{acknowledgements.tex}
+\include{preTexto/coverPage}
+\include{preTexto/abstract}
+\include{preTexto/dedication}
+\include{preTexto/declaration}
+\include{preTexto/acknowledgements}
 
 \tableofcontents
 \listoffigures
 \listoftables
 
-\chapter{Introduction}
-\label{chap:introduction}
-\pagenumbering{arabic}% Arabic page numbers (and reset to 1)
-\subfile{texto/01-introduction.tex}
-
-\chapter{Methods}
-\label{chap:methods}
-\subfile{texto/02-methods.tex}
-
-\chapter{Results and Discussion}
-\label{chap:resultsDiscussion}
-
-\chapter{Conclusion}
-\label{chap:conclusion}
+\include{texto/01-introduction}
+\include{texto/02-art1}
+\include{texto/03-art2}
+\include{texto/04-art3}
+\include{texto/05-art4}
+\include{texto/06-art5}
+\include{texto/07-conclusion}
 
 \printbibliography[heading=bibintoc, title={References}]
 
 \begin{appendices}
-\chapter{Grid Convergence Index (GCI) Python Script}
-\label{chap:appendixA}
-\subfile{posTexto/appendixA.tex}
+%\chapter{Grid Convergence Index (GCI) Python Script}
+%\label{chap:appendixA}
+%\include{posTexto/GCI}
+
 \chapter{Total Turbulent Kinetic Energy Function}
-\label{chap:appendixB}
-\subfile{posTexto/appendixB.tex}
+\label{chap:appendixA}
+\include{posTexto/totalTKE}
+
 \chapter{Data Processing}
-\label{chap:appendixC}
-\subfile{posTexto/appendixC.tex}
+\label{chap:appendixB}
+\include{posTexto/dataProcess}
 \end{appendices}
 \end{document}

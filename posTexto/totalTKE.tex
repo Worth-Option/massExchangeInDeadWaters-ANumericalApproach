@@ -1,4 +1,4 @@
-As the default function to write the TKE values does not account for the instantaneous values generated from the LES model, a new function was written to account both the instantaneous and averaged values. The code of the function totalTKE calculates the TKE based on the Resolved Reynolds Stress Tensor took from the instantaneous fluctuation of the velocity ($u'$) and the Subgrid Reynolds Stress Tensor ($R$).
+\noindent As the default function to write the TKE values does not account for the instantaneous values generated from the LES model, a new function was written to account both the instantaneous and averaged values. The code of the function totalTKE calculates the TKE based on the Resolved Reynolds Stress Tensor took from the instantaneous fluctuation of the velocity ($u'$) and the Subgrid Reynolds Stress Tensor ($R$).
 \begin{equation}
 totalTKE= 0.5tr(R) + 0.5tr(u')
 \end{equation}

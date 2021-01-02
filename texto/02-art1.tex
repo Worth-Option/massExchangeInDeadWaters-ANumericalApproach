@@ -10,7 +10,7 @@ The original paper was published in the book 'Water, Energy and Food Nexus in th
 \end{itemize}
 \addcontentsline{toc}{section}{Abstract}
 \section*{Abstract}
-Dead water zones (DWZs) in natural open channels, formed by consecutive groynes, are regions separated from the main channel, characterized by recirculating flows. These regions present smaller velocities compared to the main channel, increasing the deposition of sediment and the temporary storage of polluted materials. Exchange processes between DWZs and the main channel influence the transport of pollutants in channels. This study adopts the k-omega shear stress transport (SST) turbulence model to examine the mass exchange between the main channel and the DWZ created by an infinite series of groynes. The computational results were compared to data collected in literature. A good agreement was achiever in mass exchange coefficient, with a relative error of approximately 2\%.
+Dead water zones (DWZs) in natural open channels, formed by consecutive groynes, are regions separated from the main channel, characterized by recirculating flows. These regions present smaller velocities compared to the main channel, increasing the deposition of sediment and the temporary storage of polluted materials. Exchange processes between DWZs and the main channel influence the transport of pollutants in channels. This study adopts the k-omega shear stress transport (SST) turbulence model to examine the mass exchange between the main channel and the DWZ created by an infinite series of groynes. The computational results were compared to data collected in literature. A good agreement was achieved in mass exchange coefficient, with a relative error of approximately 2\%.
 
 \noindent\textbf{Keywords:} Dead water zones (DWZ); Groyne Fields; Mass Exchange; Open Channel; Computational Fluid Dynamics (CFD).
 
@@ -22,9 +22,9 @@ Since the magnitude of mean flow velocities inside the DWZ is approximately 25\%
 Therefore, in order to estimate the transport of pollutants in a channel, it is important to be able to understand and predict the exchange processes between the main channel and the DWZ formed between groynes \cite{weitbrecht2001}. These exchange processes were studied in detail in a series of laboratorial experiments carried out by \textcite{weitbrecht2004}. \textcite{Hinterberger2007} used large eddy simulation (LES) to model Weitbrecht’ experimental results. Although being a very precise model, LES is also more time consuming when compared to simpler models. Therefore, this study aims to investigate the mass exchange between the main channel and the groyne field using a simpler two-equations turbulence model, k-omega SST. The computational results are compared to Weibrecht results and a good agreement was obtained.
 
 \section{Methods}
-The geometry was chosen to match the groynes from the second series of experiments described in \textcite{weitbrecht2004}. The flow depth (h) was kept constant at 0.046 m and the experimental channel width (B) at 1.80m. The emergent groynes were 0.50m long (W) and spaced 1.25m apart (L), producing an aspect ratio of W/L = 0.40. The groyne heads were in a semi-circle format with diameter of 0.05m. The Reynolds number was 7360, and thereby turbulent.
+The geometry was chosen to match the groynes from the second series of experiments described in \textcite{weitbrecht2004}. The flow depth ($h$) was kept constant at 0.046 m and the experimental channel width ($B$) at 1.80m. The emergent groynes were 0.50m long ($W$) and spaced 1.25m apart ($L$), producing an aspect ratio of $W/L = 0.40$. The groyne heads were in a semi-circle format with diameter of 0.05m. The Reynolds number was 7360, and thereby turbulent.
 
-The flow past the most downstream-located groyne in the series had a periodic behaviour \cite{Hinterberger2007}. Consequently, only one complete groyne field and two halves (located upstream and downstream from the complete one) was computed and a translational periodic boundary condition was imposed (Figure \ref{fig:art1:numericalDomainArticle1}). The mean streamwise velocity in the computational domain was approximately U = 11 cm/s, which corresponds to a mass flux of 6.56 kg/m² of water in the periodic zones. 
+The flow past the most downstream-located groyne in the series had a periodic behaviour \cite{Hinterberger2007}. Consequently, only one complete groyne field and two halves (located upstream and downstream from the complete one) was computed and a translational periodic boundary condition was imposed (Figure \ref{fig:art1:numericalDomainArticle1}). The mean streamwise velocity in the computational domain was approximately $U = 11 cm/s$, which corresponds to a mass flux of 6.56 kg/m² of water in the periodic zones. 
 
 As the effects of the obstacles in the main channel extends up to one obstacle length in the transversal direction (y-axis) \cite{Brevis2014} the domain was two-thirds of the experimental flume width (B), reducing the computational effort. A free-slip symmetry boundary condition was imposed on the surface (Figure \ref{fig:art1:numericalDomainArticle1}). This boundary condition was also used on the free surface plane as it is an acceptable simplification for flows with Froude numbers smaller than 0.5 (our Froude number was 0.24) \cite{alfrink1983}. All walls, bed, lower side wall and groyne walls were considered hydraulically smooth.
 
@@ -37,7 +37,7 @@ As the effects of the obstacles in the main channel extends up to one obstacle l
 
 The domain was calculated in a three-dimensional grid (Figure \ref{fig:art1:mesh} a). The spatial discretization had a higher refinement in regions close to walls and at high velocity gradients regions. The meshing of the groyne’s heads considered its curvature and the proximity to the wall. This region used an O-grid with increasing element size (Figure \ref{fig:art1:mesh} b). The mesh had 20 divisions in the z-axis, increasing gradually from the bottom of the channel to its free surface (Figure \ref{fig:art1:mesh} c). In the y-axis, the groyne field had 70 divisions that gradually increased in size as it gets closer to the middle of the field. The strip that contains the groyne’s heads had finer elements due to the momentum transfer in the shear layer. The total grid presented approximately one million elements.
 
-The commercial software called Ansys® FLUENT (version 14) was used to solve the grid, using the finite volume method to discretize the governing mass and momentum equations. The turbulent model chosen is based at Reynolds-averaged Navier-Stokes equations (RANS) approach, that consists of time averaged equations for fluid flow. The turbulent calculations were solved using the k-omega SST model proposed by \textcite{Menter2005}, due to its capability of solving fluid flow in low Reynolds numbers. The pressure-velocity coupling method was SIMPLE and the gradient spatial discretization was Least Squares Cell Based. The momentum was discretized in a third order MUSCL scheme. The turbulent kinect energy (k) and specific dissipation rate (omega) were discretized in a second order upwind scheme.
+The commercial software called Ansys® FLUENT (version 14) was used to solve the grid, using the finite volume method to discretize the governing mass and momentum equations. The turbulent model chosen is based at Reynolds-averaged Navier-Stokes equations (RANS) approach, that consists of time averaged equations for fluid flow. The turbulent calculations were solved using the k-omega SST model proposed by \textcite{Menter2005}, due to its capability of solving fluid flow in low Reynolds numbers. The pressure-velocity coupling method was SIMPLE and the gradient spatial discretization was Least Squares Cell Based. The momentum was discretized in a third order MUSCL scheme. The turbulent kinect energy ($tke$) and specific dissipation rate ($\omega$) were discretized in a second order upwind scheme.
 
 In addition to the velocity field, tracer concentration fields were also calculated by solving the following transport equation 
 \begin{equation}
@@ -47,7 +47,7 @@ In addition to the velocity field, tracer concentration fields were also calcula
 Sc_t = \frac{\mu_t}{\rho D_t}
 \label{eqn:art1:Sct}
 \end{equation}
-where $\rho$ is the fluid mass density, $Y_i$ is the local mass fraction of each species, $D_{i,m}$ is the mass diffusion coefficient for species in the mixture, $\vec{v}$ is the velocity vector, $Sc_t$ is the turbulent Schmidt number (Equation \ref{eqn:art1:Sct}),  turbulent viscosity and  the turbulent diffusivity. In other terms, the transport equation means that the rate of change and the net rate of flow (convection) equals the rate of change due to diffusion.
+where $\rho$ is the fluid mass density, $Y_i$ is the local mass fraction of each species, $D_{i,m}$ is the mass diffusion coefficient for species in the mixture, $\vec{v}$ is the velocity vector, $Sc_t$ is the turbulent Schmidt number (Equation \ref{eqn:art1:Sct}), $\mu_t$ turbulent viscosity and $D_t$ the turbulent diffusivity. In other terms, the transport equation means that the rate of change and the net rate of flow (convection) equals the rate of change due to diffusion.
 
 Equation (\ref{eqn:art1:transportEq}) does not consider any chemical reactions or addition of phases during the solution and was discretized in a second order upwind scheme. The tracer was conservative, pursuing the same properties than water.
 
@@ -58,7 +58,7 @@ Equation (\ref{eqn:art1:transportEq}) does not consider any chemical reactions o
 \label{fig:art1:mesh}
 \end{figure}
 
-The time step in the simulation was 0.024h/U. The simulation was run for nearly 180h/U until the fully developed state was achieved. Once the flow reached the fully developed state, the tracer mass fraction was set to 1 within the groyne field and 0 in the other parts of the channel. Then, statistics of the mean flow and tracer transport were calculated using the instantaneous flow fields and mean tracer concentration inside the groyne field over the next 548h/U.
+The time step in the simulation was $0.024h/U$. The simulation was run for nearly $180h/U$ until the fully developed state was achieved. Once the flow reached the fully developed state, the tracer mass fraction was set to 1 within the groyne field and 0 in the other parts of the channel. Then, statistics of the mean flow and tracer transport were calculated using the instantaneous flow fields and mean tracer concentration inside the groyne field over the next $548h/U$.
 
 \section{Results and Discussion}
 Two gyres could be observed in the groyne field. A large primary gyre (right vortex in the central groyne field) and a small secondary gyre in the upstream groyne (Figure \ref{fig:art1:contour}). The formation of this system occurred by the momentum transferred by the main channel through a mixing layer. As the main flow went downstream, the shear in between zones excited an anticlockwise gyre (primary gyre) that further excited a smaller clockwise circulation (secondary gyre) that had no contact with the main channel. The secondary gyre was smaller in size (approximately 21\% of the groyne field area) and velocity magnitudes, when compared to the mean circulation (Figure \ref{fig:art1:contour}).
@@ -96,9 +96,9 @@ Where MRT is the mean retention time. Based on the MRT, the mass coefficient k (
 \begin{equation}
 k=\frac{W}{MRT U}
 \label{eqn:art1:k}
-\end{equation}The fitted curve presented an MRT = 117.7s that related to an exchange coefficient of k = 0.026. The relative error between the mean value of Weitbrecht’ experiments and our model was 1.99\% for the exchange coefficient and 1.69 \% for MRT (Table \ref{tab:art1:kVal}).
+\end{equation}The fitted curve presented an $MRT = 117.7s$ that related to an exchange coefficient of $k = 0.026$. The relative error between the mean value of Weitbrecht’ experiments and our model was 1.99\% for the exchange coefficient and 1.69 \% for MRT (Table \ref{tab:art1:kVal}).
 
-Although we could observe a good fitting between our computational model and the experimental results, it can be observed that the system presented two slopes, with a breakpoint near C/C0 = 0.2 (Figure \ref{fig:art1:massGraph1}). The first slope was influenced by the tracer concentration present in the primary gyre, that oscillates between ejecting mass and re-absorbing via the shear layer. The second one ejects mass slower, as the concentration in the field was mainly disposed in the secondary gyre. Figure \ref{fig:art1:massGraph2} shows the tracer concentration fitted in two curves, the first curve presented an MRT = 113.27s and a k = 0.0274 while the second MRT = 121.43s and k = 0.0256. The summary of the model and comparisons with previous studies can be seen in Table \ref{tab:art1:kVal}.
+Although we could observe a good fitting between our computational model and the experimental results, it can be observed that the system presented two slopes, with a breakpoint near $C/C0 = 0.2$ (Figure \ref{fig:art1:massGraph1}). The first slope was influenced by the tracer concentration present in the primary gyre, that oscillates between ejecting mass and re-absorbing via the shear layer. The second one ejects mass slower, as the concentration in the field was mainly disposed in the secondary gyre. Figure \ref{fig:art1:massGraph2} shows the tracer concentration fitted in two curves, the first curve presented an $MRT = 113.27s$ and a $k = 0.0274$ while the second $MRT = 121.43s$ and $k = 0.0256$. The summary of the model and comparisons with previous studies can be seen in Table \ref{tab:art1:kVal}.
 
 Our results are consistent with field observations. \textcite{sukhodolov2014}, for example, observed that the mass concentrated in the secondary gyre, since it presented the slowest velocities in the groyne field.
 
@@ -134,6 +134,26 @@ Mean value of experiments            & 118         & 0.027  \\
 
 \section{Conclusion}
 A 3D k-omega SST simulation was presented for a periodic shallow water flow in a groyne field. Out model was able to reproduce a similar structure and magnitude flow compared to experimental data. Furthermore, our model could predict the mass exchange coefficient between the main channel and the DWZ and the mean retention time of the DWZ, being in good concordance with experimental results. In agreement to experimental and field observations, the decay of mass inside the field is described in two phases, first when the primary gyre dominates the ejection and second when the mass in concentrated in the second gyre prolonging the MRT. Hence, a simpler model than LES can predict the main parameters related to the mass exchange process in groyne structures.
+
+%\nomenclature{$h$}{Flow Depth\nomunit{$m$}}
+%\nomenclature{$B$}{Experimental channel width\nomunit{$m$}}
+%\nomenclature{$W$}{Groyne field width\nomunit{$m$}}
+%\nomenclature{$L$}{Groyne field length\nomunit{$m$}}
+%\nomenclature{$U$}{Mean streamwise velocity in the main channel\nomunit{$m/s$}}
+%\nomenclature{$tke$}{Turbulent kinetic energy\nomunit{$m^2/s^2$}}
+%\nomenclature{$\omega$}{Specific dissipation rate\nomunit{$1/s$}}
+%\nomenclature{$\rho$}{Fluid mass density\nomunit{$kg/m^3$}}
+%\nomenclature{$Y_i$}{Local mass fraction of each species}
+%\nomenclature{$D_{i,m}$}{Mass diffusion coefficient for the species in the mixture}
+%\nomenclature{$\vec{v}$}{Velocity vector\nomunit{$m/s$}}
+%\nomenclature{$Sc_t$}{Turbulent Schmidt number}
+%\nomenclature{$\mu_t$}{Turbulent viscosity\nomunit{$kg/m s$}}
+%\nomenclature{$D_t$}{Turbulent diffusivity\nomunit{$m^2/s$}}
+%\nomenclature{$C$}{Concentration}
+%\nomenclature{$MRT$}{Mean retention time\nomunit{$s$}}
+%\nomenclature{$t$}{Time\nomunit{$s$}}
+%\nomenclature{$k$}{Mass exchange coefficient}
+%\printnomenclature
 
 \addcontentsline{toc}{section}{Acknowledgements}
 \section*{Acknowledgements}

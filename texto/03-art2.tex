@@ -7,13 +7,13 @@ The original paper was published in the '17º Congresso Nacional do Meio Ambient
 \begin{itemize}
     \item Luiz Eduardo Domingos de Oliveira \footnote{Federal University of Mato Grosso do Sul}
     \item Taís Natsumi Yamasaki \footnotemark[1]
-    \item Felipe Rezende da Cosa \footnotemark[1]
+    \item Felipe Rezende da Costa \footnotemark[1]
     \item Johannes Gérson Janzen \footnotemark[1]
     \item Carlo Gualtieri \footnote{University of Naples Federico II}
 \end{itemize}
 \addcontentsline{toc}{section}{Abstract}
 \section*{Abstract}
-In rivers and channels, dead zones are regions of low velocity with the presence of recirculation motion, that have important ecological functions (eg. sediment retention) and also can be formed from human-made structures (eg. transversal dikes). The presence of vegetation in dead zones is a new topic of this discussion opening its way in the vegetated flow area of study, as the vegetation has the potential of changing the flow and altering mass exchange processes with the main channel. This study aimed to develop a numerical model of a single vegetated lateral cavity using computational fluid dynamics(CFD). The vegetation drag was represented by a porous media which coefficients were calculated from experimental data. The results of the model shown that the cavity had a single vortex system in its interior, the flow velocity varied from $-0.11$ to $ 0.24 cm/s$. The simulation adapted well to the experimental data, which proved that the porous media is a suitable method of representing the vegetation drag in CFD.
+In rivers and channels, dead zones are regions of low velocity with the presence of recirculation motion, that have important ecological functions (eg. sediment retention) and also can be formed from human-made structures (eg. transversal dikes). The presence of vegetation in dead zones is a new topic of this discussion opening its way in the vegetated flow area of study, as the vegetation has the potential of changing the flow and altering mass exchange processes with the main channel. This study aimed to develop a numerical model of a single vegetated lateral cavity using Computational Fluid Dynamics (CFD). The vegetation drag was represented by a porous media which coefficients were calculated from experimental data. The results of the model shown that the cavity had a single vortex system in its interior and the flow velocity varied from $-0.11$ to $ 0.24 cm/s$. The simulation adapted well to the experimental data, which proved that the porous media is a suitable method of representing the vegetation drag in CFD.
 
 \noindent\textbf{Keywords:} Lateral Cavities; Vegetation; Computational Fluid Dynamics (CFD).
 
@@ -23,7 +23,7 @@ Rivers are formed by complex morphological boundaries, that create a variety of 
 In the field of vegetated flows, in which the main objective is to study the hydrodynamics between the flow and the vegetation, the research of vegetated dead zones is still recent. The presence of vegetation in the dead zone offers an additional drag to the flow, further impacting the velocity patterns in the region. Henceforth, the mass exchange processes between the main channel and the dead zone are also altered \cite{xiang2019}. This enlightens the importance of understanding the relationships, so it could be better used aiming to benefit the surrounding ecosystem. This study aims to simulate through Computational Fluid Dynamics (CFD) a vegetated lateral cavity using a porous media to represent the vegetation.
 
 \section{Methods}
-The geometry chosen consisted of a part of a channel and a lateral cavity (Figure \ref{fig:art2:compDomain}) based in \cite{xiang2019}. The depth of the flow and the channel ($H$) was defined in $0.10 m$ and the channel width ($B$) in $0.30m$. The cavity was $L=0.25 m$ long and $W=0.15m$ wide. The mean velocity was kept constant as $U=0.101m/s$, which corresponded to a Reynolds number of $Re=9000$ (turbulent flow). The water was kept at a constant temperature of $293K$.
+The chosen geometry consisted of a part of a channel and a lateral cavity (Figure \ref{fig:art2:compDomain}) based in \cite{xiang2019}. The depth of the flow and the channel ($H$) was defined in $0.10\,m$ and the channel width ($B$) in $0.30\,m$. The cavity was $L=0.25\,m$ long and $W=0.15\,m$ wide. The mean velocity was kept constant as $U=0.101\,m/s$, which corresponded to a Reynolds number of $Re=9000$ (turbulent flow). The water was kept at a constant temperature of $T=293$ K.
 
 \begin{figure}[!ht]
 \centering
@@ -31,13 +31,13 @@ The geometry chosen consisted of a part of a channel and a lateral cavity (Figur
 \caption{Computational domain. The flow direction is indicated by the grey arrow ('Entrada'). The dimensions are in metres and the coordinate origin ($x, y, z = 0$) at the lower right portion of the channel.}
 \label{fig:art2:compDomain}
 \end{figure}
-The set boundary conditions used were a longitudinal plane that cuts the domain at $y=0$ and at the top of the domain ($z=0.10m$) that were defined as slip surfaces. The planes that cut the left portion of the channel and the cavity walls were considered hydraulic smooth walls of zero velocity. The channel entrance ($x=0m$) imported a velocity profile previously simulated in a periodic channel. The outlet surface ($x=1.00m$) was calculated with a zero gradient function.
+The used boundary conditions were a longitudinal plane that cuts the domain at $y=0$ and at the top of the domain ($z=0.10$ m) that were defined as slip surfaces. The planes that cut the left portion of the channel and the cavity walls were considered hydraulic smooth walls of zero velocity. The channel entrance ($x=0\,m$) imported a velocity profile previously simulated in a periodic channel. The outlet surface ($x=1.00\,m$) was calculated with a zero gradient function.
 
 The vegetation was represented with a porous media that filled all the lateral cavity. This is a simple way to represent the vegetation drag, and yet being an effective method of capturing the hydrodynamic effects \cite{Yamasaki2019}.  The adopted porous media was calculated by the Darcy-Forchheimer model (DF), that divides the drag into viscous and inertial resistances. The coefficients were calculated using the Ergun formulation and \textcite{Sonnenwald2017}, the vegetation parameters used to calculate the coefficients for the DF were taken from the second case of \textcite{xiang2019}. The details of the used methods can be found in the user's guide of \textit{Fluent}\textsuperscript{\textregistered}.
 
 The numerical model was simulated under the commercial software \textit{Fluent}\textsuperscript{\textregistered} (version 14), using the method of finite volumes to discretise the governing equations of mass conservation and momentum. The turbulence model applied was the Detached Eddy Simulation, with the contour model using the k-omega Shear Stress Transport. The simulation ran under a transient configuration for 350 seconds, that was enough time to stabilise the flow.
 \section{Results and Discussion}
-As expected, the flow inside the cavity became slower when compared to the main channel, the x component of the velocity varied between $0.11$ and $0.25U$ (Figure \ref{fig:art2:velCont}). The high-velocity gradient in the cavity entrance ($y=0.30m$) formed a shear layer that originated the vortexes. These vortexes were carried inside the cavity where a single circulation system, concentrated to the right portion, occurred as the streamlines in Figure \ref{fig:art2:velCont} indicates. The adjusted drag coefficients were: $83.37m^2$ for the viscous resistance and $3.79m^{-1}$ for the inertial resistance.
+As expected, the flow inside the cavity became slower when compared to the main channel, the x component of the velocity varied between $0.11$ and $0.25U$ (Figure \ref{fig:art2:velCont}). The high-velocity gradient in the cavity entrance ($y=0.30\,m$) formed a shear layer that originated the vortexes. These vortexes were carried inside the cavity where a single circulation system, concentrated to the right portion, occurred as the streamlines in Figure \ref{fig:art2:velCont} indicates. The adjusted drag coefficients were: $83.37\,m^2$ for the viscous resistance and $3.79\,m^{-1}$ for the inertial resistance.
 
 \begin{figure}[!ht]
 \centering
@@ -56,10 +56,19 @@ As expected, the flow inside the cavity became slower when compared to the main 
 \caption{Velocity distributions along the plane $z=0.60H$.}
 \label{fig:art2:velz06H}
 \end{figure}
-The y-velocity data was extracted along the plane $z=0.6H$ and condensed in a line using an ensemble averaging proceedure along the y-axis similar to the procedure adopted in \textcite{sukhodolov2014}. The velocity profile is shown and compared with numerical and experimental data extracted from the literature in the Figure \ref{fig:art2:velProf}. At the entrance of the cavity ($(y-y_0)/H = 0$), the velocity $u$ was $0.25U$ and it kept getting slower as it moved towards the interior of the cavity. In $(y-y_0)/H = 1.4$, the flow got a negative value of $u = -0.1U$, indicating the presence of vortexes. The presented model, in orange, was well adjusted to the experimental data (black dots). This means that the porous media coefficients were well calculated and the model was capable of reproducing the flow in a accordance to the laboratory experiments.
+The y-velocity data was extracted along the plane $z=0.6H$ and condensed in a line using an ensemble averaging procedure along the y-axis similar to the procedure adopted in \textcite{sukhodolov2014}. The velocity profile is shown and compared with numerical and experimental data extracted from the literature in the Figure \ref{fig:art2:velProf}. At the entrance of the cavity ($(y-y_0)/H = 0$), the velocity $u$ was $0.25U$ and it kept getting slower as it moved towards the interior of the cavity. In $(y-y_0)/H = 1.4$, the flow got a negative value of $u = -0.1U$, indicating the presence of vortexes. The presented model, in orange, was well adjusted to the experimental data (black dots). This means that the porous media coefficients were well calculated and the model was capable of reproducing the flow in a accordance to the laboratory experiments.
 
 \section{Conclusion}
 The porous media model was capable of representing the vegetation in the numerical simulation. The cavity presented a single circulation system with a slower velocity than the main channel. The velocity profile obtained from the simulation was well adjusted to the experimental data, which further demonstrates that the model was capable of capturing the effects of vegetation inside the cavity.
+
+%\nomenclature{$H$}{Flow Depth\nomunit{$m$}}
+%\nomenclature{$B$}{Experimental channel width\nomunit{$m$}}
+%\nomenclature{$W$}{Lateral cavity width\nomunit{$m$}}
+%\nomenclature{$L$}{Lateral cavity length\nomunit{$m$}}
+%\nomenclature{$U$}{Mean streamwise velocity in the main channel\nomunit{$m/s$}}
+%\nomenclature{$Re$}{Reynolds number}
+%\nomenclature{$T$}{Temperature\nomunit{$K$}}
+%\printnomenclature
 
 \addcontentsline{toc}{section}{Funding}
 \section*{Funding}

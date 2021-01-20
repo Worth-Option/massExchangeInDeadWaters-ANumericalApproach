@@ -1,5 +1,6 @@
 \noindent
-In this appendix the script used to process simulation data is presented. This code uses python to calculate the ensemble averaging properties in a 2D plane.
+In this appendix the script used to process simulation data is presented. This code uses python to calculate the ensemble averaging properties in a 2D plane. Note, the only process that is not fully automated is the calculation of the mixing length that requires the user to manually fill the maximum value of the absolute velocity gradient in the y direction $({\partial \bar u}/{\partial y})_{max}$.
+
 \section{File Structure}
 \noindent
 The file structure of the script is shown bellow:
@@ -7,13 +8,14 @@ The file structure of the script is shown bellow:
 \dirtree{%
 .1 /.
 .2 bin.
-.3 dataProcessing.py\DTcomment{Data Analysing and Exporting script}.
+.3 dataProcess.py\DTcomment{Data Analysing and Exporting script}.
 .3 importCSV.py\DTcomment{CSV import script}.
 .3 mass.py\DTcomment{Mass analysis script}.
 .3 plot.py\DTcomment{Plotting script}.
 .3 multipleSimulationImport.py\DTcomment{CSV import script}.
 .3 multipleSimulationProcess.py\DTcomment{Velocity Analysis script}.
 .3 multipleSimulationPlot.py\DTcomment{Plotting and export script}.
+.3 thickness\DTcomment{Calculation of the thickness of the mixing layer}.
 .2 dataset\DTcomment{Directory with literature data}.
 .2 treatment\DTcomment{Directory for multiple simulations treatment}.
 .3 results\DTcomment{Software Created Directory}.
@@ -23,6 +25,7 @@ The file structure of the script is shown bellow:
 .2 dataAnalysis.py.
 }
 \noindent
+
 The requirements of the script are:
 \begin{itemize}
 \item Python 3.x
@@ -32,12 +35,34 @@ The requirements of the script are:
 \item Matplotlib
 \end{itemize}
 \noindent
+
 \section{preProcessing.py}
 The execution of the preProcessing.py script depends on the preTreatment directory that contains the .csv files to be analysed and the dataset directory that contains the csv extracted from literature.
 
 \begin{lstlisting}[language=python]
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+#  preProcessing.py
+#  
+#  Copyright 2020 Luiz Oliveira
+#  
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#  
+#  
 
 """
 Main module
@@ -46,12 +71,22 @@ This script analyses the output of simulations ran on OpenFoam
 The analysis steps are performed by the modules in the bin folder
 """
 
+import sys
 import os
 import shutil
 import time
 start_time = time.time()
 
-# Clear the previous results folder
+# Check for necessary directories
+if not os.path.exists('preTreatment'):
+    os.makedirs('preTreatment')
+    print("The directory preTreatment/ was created, please populate with the "
+          "desired csv files to be analysed.")
+    sys.exit('The directory preTreatment/ did not exist.')
+elif not os.listdir('preTreatment'):
+    sys.exit('The directory preTreatment/ is empty.')
+    
+# Clear the previous results directories
 if os.path.exists('preTreatment/results'):
     shutil.rmtree('preTreatment/results')
 os.makedirs('preTreatment/results')
@@ -60,7 +95,6 @@ os.makedirs('preTreatment/results/CSV')
 os.makedirs('preTreatment/results/Plot')
 
 # Define Global Variables
-
 H = 0.10
 U = 0.101
 W = 0.15
@@ -68,7 +102,6 @@ L = 0.25
 Y0 = 0.30
 X0 = 0.25
 RHO = 1e-6
-massTimeZero = 150
 
 # Import CSV
 exec(open("bin/importCSV.py").read())
@@ -76,25 +109,45 @@ print("""Importing Done...
 Elapsed Time %.3f s\n""" %(time.time() - start_time))
 
 # Data Processing
-exec(open("bin/dataProcess.py").read())
-print("""Processing Done...
+try:
+    exec(open("bin/dataProcess.py").read())
+    print("""Processing Done...
 Elapsed Time %.3f s\n""" %(time.time() - start_time))
+except:
+    print("""No data was processed.
+The script jumped into the next section: Mass Fitting""")
+    print("Elapsed Time %.3f s\n" %(time.time() - start_time))
 
 # Mass Fitting
-exec(open("bin/mass.py").read())
-print("""Mass Fitting Done...
+try: 
+    exec(open("bin/mass.py").read())
+    print("""Mass Fitting Done...
 Elapsed Time %.3f s\n""" %(time.time() - start_time))
-
+except:
+    print("""No mass data was processed.
+The script jumped into the next section: Mixing Layer Thickness""")
+    print("Elapsed Time %.3f s\n" %(time.time() - start_time))
+    
+# Mixing Layer Thickness
+try: 
+    exec(open("bin/thickness.py").read())
+    print("""Mixing Layer Thickness Calculated...
+Elapsed Time %.3f s\n""" %(time.time() - start_time))
+except:
+    print("""No mixing layer thickness data was processed.
+The script jumped into the next section: Plotting""")
+    print("Elapsed Time %.3f s\n" %(time.time() - start_time))
+    
 # Plot Data
-exec(open("bin/plot.py").read())
-print("""Plotting Done...
+try:
+    exec(open("bin/plot.py").read())
+    print("""Plotting Done...
 Elapsed Time %.3f s\n""" %(time.time() - start_time))
-
-# Error Measurements
-#exec(open("bin/statistics.py").read())
+except:print("No plotting was done.\n")
 
 print("""All Done...
 Execution Time %.3f seconds""" %(time.time() - start_time))
+del start_time
 
 \end{lstlisting}
 \section{dataAnalysis.py}
@@ -103,27 +156,112 @@ The execution of the dataAnalysis.py script depends on the treatment directory t
 \begin{lstlisting}[language=python]
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+#  dataAnalysis.py
+#
+#  Copyright 2020 Luiz Oliveira <luiz@luizLinux>
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#
+#
+"""
+Main module
 
+This script analyses the output of preProcessing.py
+The analysis steps are performed by the modules in the bin folder
+"""
+
+import sys
 import os
+import shutil
+import time
+start_time = time.time()
 
-# Create Results Folder
-if not os.path.exists('treatment/results'):
-    os.makedirs('treatment/results')
+# Check for necessary directories
+if not os.path.exists('treatment'):
+    os.makedirs('treatment')
+    print("The directory treatment/ was created, please populate with the "
+          "desired csv files to be analysed.")
+    sys.exit('The directory treatment/ did not exist.')
+elif not os.listdir('treatment'):
+    sys.exit('The directory treatment/ is empty.')
+
+# Clear the previous results directories
+if os.path.exists('treatment/results'):
+    shutil.rmtree('treatment/results')
+os.makedirs('treatment/results')
+os.makedirs('treatment/results/Plots')
+os.makedirs('treatment/results/SelectPlots')
+os.makedirs('treatment/results/CSV')
+
+# Define Global Variables
+H = 0.10
+U = 0.101
+W = 0.15
+L = 0.25
+Y0 = 0.30
+X0 = 0.25
+RHO = 1e-6
 
 # Import CSV
-exec(open("bin/multipleSimulationImport.py").read());
+exec(open("bin/multipleSimulationImport.py").read())
+print("""Importing Done...
+Elapsed Time %.3f s\n""" %(time.time() - start_time))
 
 # Process Data
-exec(open("bin/multipleSimulationProcess.py").read());
+exec(open("bin/multipleSimulationProcess.py").read())
+print("""Processing Done...
+Elapsed Time %.3f s\n""" %(time.time() - start_time))
 
 # Data plot
-exec(open("bin/multipleSimulationPlot.py").read());
+exec(open("bin/multipleSimulationPlot.py").read())
+print("""Plotting Done...
+Elapsed Time %.3f s\n""" %(time.time() - start_time))
+
+print("""All Done...
+Execution Time %.3f seconds""" %(time.time() - start_time))
+del start_time
+
 \end{lstlisting}
 \section{preProcessing Scripts}
 \subsection{importCSV.py}
 \begin{lstlisting}[language=python]
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+#  importCSV.py
+#  
+#  Copyright 2020 Luiz Oliveira
+#  
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#  
+#  
 
 """
 Data is imported from text files to be later processed and ploted
@@ -132,7 +270,6 @@ Data is imported from text files to be later processed and ploted
 # Libraries
 import os
 import re
-import numpy as np
 import pandas as pd
 
 # Import Literature
@@ -143,19 +280,24 @@ literatureLES = pd.read_csv('dataset/fig4/fig4a.csv', header = 1, usecols=(2,3))
 literatureLES.columns = ['(y-y0)/H','u/U']
 massLiterature = pd.read_csv('dataset/mass/mass.csv', header = 1)
 massLiterature.columns = ['Vegetation Density', 'Td']
+massLiterature.Td = massLiterature.Td * U / H
 
 # Tracer data
-tracerData = pd.read_csv('preTreatment/tracerVolAve.dat',
-                         delimiter='\t', header = 3)
-tracerData.columns = ['time', 'tracerVol']
-tracerData.tracerVol[0] = 1
-tracerData.time = tracerData.time - massTimeZero
+try:
+    tracerData = pd.read_csv('preTreatment/tracerVolAve.dat',
+                             delimiter='\t', header = 3)
+    tracerData.columns = ['time', 'tracerVol']
+    tracerData.tracerVol[0] = 1
+    massTimeZero = tracerData.time[0]
+    tracerData.time = tracerData.time - massTimeZero
+except:pass
 
 # Generic Planes
 files = os.listdir('preTreatment')
 
 # Check for csv files
 rawFiles = list()
+csvFiles = list()
 uniqueRaw = list()
 uniqueVar = list()
 
@@ -170,7 +312,12 @@ files = os.listdir('preTreatment')
 for item in files:
       if re.search('.\.raw', item):
           rawFiles.append(item)
-          
+
+for item in files:
+      if re.search('.\.csv', item):
+          csvFiles.append(item)
+
+csvFiles.sort() 
 rawFiles.sort()
 
 for item in rawFiles:
@@ -216,20 +363,59 @@ for item in rawFiles:
                 except:continue
         except:continue
 
-del aux, files, variableName, item, item2, plane, rawFiles
+thickness = dict()
+for item in csvFiles:
+    try:
+        thickness['raw'] = pd.read_csv('preTreatment/'+item, header=0,\
+                                float_precision='high')
+        if len(thickness['raw'].columns) == 8:
+            thickness['raw'].drop(['Gradients_0','Gradients_1','Gradients_2'],\
+                     axis=1, inplace=True)
+        colNames = ['x', 'y', 'z', 'UMean_X', 'absGradient']
+        thickness['raw'].columns = colNames
+        
+        del colNames
+    except:continue
+
+try:
+    del aux, variableName, item2, plane
+except:pass
+
+del files, item, rawFiles, csvFiles
 
 \end{lstlisting}
 
-\subsection{dataProcessing.py}
+\subsection{dataProcess.py}
 \begin{lstlisting}[language=python]
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+#
+#  dataProcess.py
+#  
+#  Copyright 2020 Luiz Oliveira
+#  
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#  
+#  
 """
 This code processes the data imported from importcsv.py
 The data is ensembled averaged and then exported to plot.py script
 """
 
+import re
 import pandas as pd
 import openpyxl
 
@@ -264,7 +450,7 @@ def excelExport(var, name):
     with pd.ExcelWriter('preTreatment/results/Excel/'+name+'.xlsx',
                         engine="openpyxl", mode='a') as writer:
         for df_name, df in var.items():
-            df.to_excel(writer, sheet_name=df_name)
+            df.to_excel(writer, sheet_name=df_name, index=False)
             
 def csvExport(df, name):
 # =============================================================================
@@ -340,10 +526,9 @@ def varTreatment(planes, physicalVar, colNames, nColumns, direction,
             
         excelExport(varDict, varName+"Dir_"+direction)
         csvName = varName.split("_")[0]
-        csvExport(varDict[ii], csvName+ii+"_Dir_"+direction)
+        csvExport(varDict[ii], csvName+"_"+ii+"_Dir_"+direction)
     return varDict
 
-# Literature Data
 
 # =============================================================================
 # Planes 0 -> 4
@@ -475,7 +660,7 @@ fig4aOur = varTreatment(['p17'], UMean, colNames, 6, "y",'UMean_p17_',
 fig4aOur = fig4aOur['p17']
 fig4aOur.u = fig4aOur.u/U
 
-del UMean, lambVectorMean, pMean, RMean, vorticityMean, colNames
+del lambVectorMean, pMean, RMean, vorticityMean, colNames
 
 \end{lstlisting}
 
@@ -483,6 +668,27 @@ del UMean, lambVectorMean, pMean, RMean, vorticityMean, colNames
 \begin{lstlisting}[language=python]
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+#  mass.py
+#  
+#  Copyright 2020 Luiz Oliveira
+#  
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#  
+#  
 
 """
 Mass quantities are analysed in two ways: by tracer volume and y-velocity
@@ -505,7 +711,8 @@ def model(x, td):
     """
     return np.exp(-x/td)
 
-td, pcov = curve_fit(model, tracerData.time, tracerData.tracerVol, p0=(120))
+td, pcov = curve_fit(model, tracerData.time, tracerData.tracerVol, p0=(40),
+                     maxfev=5000)
 
 k = W / (td * U)
 
@@ -522,6 +729,7 @@ kAbsError = kexp - k
 
 # Mass as function of velocity
 E = interfaceVel.apply(np.abs).mean()/2
+
 tdvel = W/E
 kvel = W / (tdvel * U)
 
@@ -547,12 +755,34 @@ file.write("k = %.2f\n" %kAbsError)
 file.write("---\nData analysed in {} (GMT-4)".format(today))
 file.close()
 
-del file, now, today, E
+del file, now, today
+
 \end{lstlisting}
 \subsection{plot.py}
 \begin{lstlisting}[language=python]
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+#  plot.py
+#  
+#  Copyright 2020 Luiz Oliveira
+#  
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#  
+#  
 
 """
 Data is imported from dataProcess.py and ploted into png figures
@@ -561,14 +791,13 @@ Data is imported from dataProcess.py and ploted into png figures
 # Libraries
 import re
 import matplotlib.pyplot as plt
-import pandas as pd
 from matplotlib.offsetbox import AnchoredText
 
 def plotVar(varName, axis, title, name, col, admensional, first, last):
 # =============================================================================
 #     Runs through all plots from a variable and plots it
 # =============================================================================
-    fig, ax = plt.subplots(figsize=(9,6), dpi=120)
+    fig, ax = plt.subplots(figsize=(9,6), dpi=300)
 
     for key, df in varName.items():
         nKey = key
@@ -582,202 +811,207 @@ def plotVar(varName, axis, title, name, col, admensional, first, last):
                         varName[key].iloc[:,0], label=key)
 
     ax.legend(loc='best',fontsize='x-large')
-
-    ax.set_title(title,fontsize='xx-large')
+    if title != "None":
+        ax.set_title(title,fontsize='xx-large')
 
     plt.grid()
     plt.autoscale(enable=True, tight=True)
     plt.xlabel(axis[0],fontsize='x-large')
     plt.ylabel(axis[1],fontsize='x-large')
-    plt.savefig('preTreatment/results/Plot/'+name+'.png', bbox_inches='tight')
+    plt.savefig('preTreatment/results/Plot/'+name+'.png', bbox_inches='tight',
+                format='png')
+    plt.close()
 
 # =============================================================================
 # Planes 0 -> 4
 # Vertical Planes Varying the Y axis from Y = 0.30 to Y = 0.45
 # =============================================================================
+
+noTitle = "None"
+    
 ## RMean Dir_x_00_04
-axisNames = ['(x-x0)/L',r'Rmag/U^2']
+axisNames = ['(x-x0)/L','Rmag/$U^2$']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical XZ planes'
 figureName = 'RMean_mag_Dir_x_00_04'
-plotVar(RMean_00_04_Dirx, axisNames, plotTitle, figureName, 7, U**2, 0, 4)
+plotVar(RMean_00_04_Dirx, axisNames, noTitle, figureName, 7, U**2, 0, 4)
 
 ## RMean Dir_x_00_04
-axisNames = [r'Rmag/U^2', 'z/H']
+axisNames = ['Rmag/$U^2$', 'z/H']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical XZ planes'
 figureName = 'RMean_mag_Dir_x_00_04'
-plotVar(RMean_00_04_Dirz, axisNames, plotTitle, figureName, 7, U**2, 0, 4)
+plotVar(RMean_00_04_Dirz, axisNames, noTitle, figureName, 7, U**2, 0, 4)
 
 ## UMean Dir_x_00_04
 axisNames = ['(x-x0)/L','u/U']
 plotTitle = 'Time Averaged x-velocity at vertical XZ planes'
 figureName = 'UMean_U_Dir_x_00_04'
-plotVar(UMean_00_04_Dirx, axisNames, plotTitle, figureName, 1, U, 0, 4)
+plotVar(UMean_00_04_Dirx, axisNames, noTitle, figureName, 1, U, 0, 4)
 
 axisNames = ['(x-x0)/L','v/U']
 plotTitle = 'Time Averaged y-velocity at vertical XZ planes'
 figureName = 'UMean_V_Dir_x_00_04'
-plotVar(UMean_00_04_Dirx, axisNames, plotTitle, figureName, 2, U, 0, 4)
+plotVar(UMean_00_04_Dirx, axisNames, noTitle, figureName, 2, U, 0, 4)
 
 axisNames = ['(x-x0)/L','w/U']
 plotTitle = 'Time Averaged z-velocity at vertical XZ planes'
 figureName = 'UMean_W_Dir_x_00_04'
-plotVar(UMean_00_04_Dirx, axisNames, plotTitle, figureName, 3, U, 0, 4)
+plotVar(UMean_00_04_Dirx, axisNames, noTitle, figureName, 3, U, 0, 4)
 
 axisNames = ['(x-x0)/L','uMag/U']
 plotTitle = 'Time Averaged velocity magnitude at vertical XZ planes'
 figureName = 'UMean_mag_Dir_x_00_04'
-plotVar(UMean_00_04_Dirx, axisNames, plotTitle, figureName, 4, U, 0, 4)
+plotVar(UMean_00_04_Dirx, axisNames, noTitle, figureName, 4, U, 0, 4)
 
 ## UMean Dir_z_00_04
 axisNames = ['u/U', 'z/H']
 plotTitle = 'Time Averaged x-velocity at vertical XZ planes'
 figureName = 'UMean_U_Dir_z_00_04'
-plotVar(UMean_00_04_Dirz, axisNames, plotTitle, figureName, 1, U, 0, 4)
+plotVar(UMean_00_04_Dirz, axisNames, noTitle, figureName, 1, U, 0, 4)
 
 axisNames = ['v/U', 'z/H']
 plotTitle = 'Time Averaged y-velocity at vertical XZ planes'
 figureName = 'UMean_V_Dir_z_00_04'
-plotVar(UMean_00_04_Dirz, axisNames, plotTitle, figureName, 2, U, 0, 4)
+plotVar(UMean_00_04_Dirz, axisNames, noTitle, figureName, 2, U, 0, 4)
 
 axisNames = ['w/U', 'z/H']
 plotTitle = 'Time Averaged z-velocity at vertical XZ planes'
 figureName = 'UMean_W_Dir_z_00_04'
-plotVar(UMean_00_04_Dirz, axisNames, plotTitle, figureName, 3, U, 0, 4)
+plotVar(UMean_00_04_Dirz, axisNames, noTitle, figureName, 3, U, 0, 4)
 
 axisNames = ['uMag/U', 'z/H']
 plotTitle = 'Time Averaged velocity magnitude at vertical XZ planes'
 figureName = 'UMean_mag_Dir_z_00_04'
-plotVar(UMean_00_04_Dirz, axisNames, plotTitle, figureName, 4, U, 0, 4)
+plotVar(UMean_00_04_Dirz, axisNames, noTitle, figureName, 4, U, 0, 4)
 
 ## lambVectorMean Dir_x_00_04
-axisNames = ['(x-x0)/L','lambVectorMag/U']
+axisNames = ['(x-x0)/L','lambVectorMean [m/s2]']
 plotTitle = 'Time Averaged Lamb Vector magnitude at vertical XZ planes'
 figureName = 'lambVectorMean_mag_Dir_x_00_04'
-plotVar(lambVectorMean_00_04_Dirx, axisNames, plotTitle, figureName, 4, 1, 0, 4)
+plotVar(lambVectorMean_00_04_Dirx, axisNames, noTitle, figureName, 4, 1, 0, 4)
 
 ## lambVectorMean Dir_z_00_04
 axisNames = ['lambVectorMean [m/s2]', 'z/H']
 plotTitle = 'Time Averaged Lamb Vector magnitude at vertical XZ planes'
 figureName = 'lambVectorMean_mag_Dir_z_00_04'
-plotVar(lambVectorMean_00_04_Dirz, axisNames, plotTitle, figureName, 4, 1, 0, 4)
+plotVar(lambVectorMean_00_04_Dirz, axisNames, noTitle, figureName, 4, 1, 0, 4)
 
 ## pMean Dir_x_00_04
 axisNames = ['(x-x0)/L',r'(pL)/($\rho$ U)']
 plotTitle = 'Time Averaged Pressure at vertical XZ planes'
 figureName = 'pMean_Dir_x_00_04'
-plotVar(pMean_00_04_Dirx, axisNames, plotTitle, figureName, 1, L/(RHO*U), 0, 4)
+plotVar(pMean_00_04_Dirx, axisNames, noTitle, figureName, 1, L/(RHO*U), 0, 4)
 
 ## pMean Dir_z_00_04
 axisNames = [r'(pL)/($\rho$ U)', 'z/H']
 plotTitle = 'Time Averaged Pressure at vertical XZ planes'
 figureName = 'pMean_Dir_z_00_04'
-plotVar(pMean_00_04_Dirz, axisNames, plotTitle, figureName, 1, L/(RHO*U), 0, 4)
+plotVar(pMean_00_04_Dirz, axisNames, noTitle, figureName, 1, L/(RHO*U), 0, 4)
 
 ## vorticity Dir_x_00_04
 axisNames = ['(x-x0)/L','vorticity[1/s]']
 plotTitle = 'Time Averaged vorticity magnitude at vertical XZ planes'
 figureName = 'vorticity_Dir_x_00_04'
-plotVar(vorticityMean_00_04_Dirx, axisNames, plotTitle, figureName, 4, 1, 0, 4)
+plotVar(vorticityMean_00_04_Dirx, axisNames, noTitle, figureName, 4, 1, 0, 4)
 
 ## vorticity Dir_z_00_04
 axisNames = ['vorticity [1/s]', 'z/H']
 plotTitle = 'Time Averaged vorticity magnitude at vertical XZ planes'
 figureName = 'vorticity_Dir_z_00_04'
-plotVar(vorticityMean_00_04_Dirz, axisNames, plotTitle, figureName, 4, 1, 0, 4)
+plotVar(vorticityMean_00_04_Dirz, axisNames, noTitle, figureName, 4, 1, 0, 4)
 
 # =============================================================================
 # Planes 5 -> 11
 # Vertical Planes Varying the X axis from X = 0.25 to X = 0.50
 # =============================================================================
 ## RMean Dir_y_05_11
-axisNames = [r'Rmag/U^2', '(y-y0)/H']
+axisNames = ['Rmag/$U^2$', '(y-y0)/H']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical YZ planes'
 figureName = 'RMean_mag_Dirx_05_11'
-plotVar(RMean_05_11_Diry, axisNames, plotTitle, figureName, 7, U**2, 5, 11)
+plotVar(RMean_05_11_Diry, axisNames, noTitle, figureName, 7, U**2, 5, 11)
 
 ## RMean Dir_z_05_11
-axisNames = [r'Rmag/U^2', 'z/H']
+axisNames = ['Rmag/$U^2$', 'z/H']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical YZ planes'
 figureName = 'RMean_mag_Dir_z_05_11'
-plotVar(RMean_05_11_Dirz, axisNames, plotTitle, figureName, 7, U**2, 5, 11)
+plotVar(RMean_05_11_Dirz, axisNames, noTitle, figureName, 7, U**2, 5, 11)
 
 ## UMean Dir_y_05_11
 axisNames = ['(y-y0)/H','u/U']
 plotTitle = 'Time Averaged x-velocity at vertical YZ planes'
 figureName = 'UMeanYZPlanes_U_Diry'
-plotVar(UMean_05_11_Diry, axisNames, plotTitle, figureName, 1, U, 5, 11)
+plotVar(UMean_05_11_Diry, axisNames, noTitle, figureName, 1, U, 5, 11)
 
 axisNames = ['(y-y0)/H','v/U']
 plotTitle = 'Time Averaged y-velocity at vertical YZ planes'
 figureName = 'UMeanYZPlanes_V_Diry'
-plotVar(UMean_05_11_Diry, axisNames, plotTitle, figureName, 2, U, 5, 11)
+plotVar(UMean_05_11_Diry, axisNames, noTitle, figureName, 2, U, 5, 11)
 
 axisNames = ['(y-y0)/H','w/U']
 plotTitle = 'Time Averaged z-velocity at vertical YZ planes'
 figureName = 'UMeanYZPlanes_W_Diry'
-plotVar(UMean_05_11_Diry, axisNames, plotTitle, figureName, 3, U, 5, 11)
+plotVar(UMean_05_11_Diry, axisNames, noTitle, figureName, 3, U, 5, 11)
 
 axisNames = ['(y-y0)/H','uMag/U']
 plotTitle = 'Time Averaged velocity magnitude at vertical YZ planes'
 figureName = 'UMeanYZPlanes_mag_Diry'
-plotVar(UMean_05_11_Diry, axisNames, plotTitle, figureName, 4, U, 5, 11)
+plotVar(UMean_05_11_Diry, axisNames, noTitle, figureName, 4, U, 5, 11)
 
 ## UMean Dir_z_05_11
 axisNames = ['u/U', 'z/H']
 plotTitle = 'Time Averaged x-velocity at vertical YZ planes'
 figureName = 'UMeanYZPlanes_U_Dirz'
-plotVar(UMean_05_11_Dirz, axisNames, plotTitle, figureName, 1, U, 5, 11)
+plotVar(UMean_05_11_Dirz, axisNames, noTitle, figureName, 1, U, 5, 11)
 
 axisNames = ['v/U', 'z/H']
 plotTitle = 'Time Averaged y-velocity at vertical YZ planes'
 figureName = 'UMeanYZPlanes_V_Dirz'
-plotVar(UMean_05_11_Dirz, axisNames, plotTitle, figureName, 2, U, 5, 11)
+plotVar(UMean_05_11_Dirz, axisNames, noTitle, figureName, 2, U, 5, 11)
 
 axisNames = ['w/U', 'z/H']
 plotTitle = 'Time Averaged z-velocity at vertical YZ planes'
 figureName = 'UMeanYZPlanes_W_Dirz'
-plotVar(UMean_05_11_Dirz, axisNames, plotTitle, figureName, 3, U, 5, 11)
+plotVar(UMean_05_11_Dirz, axisNames, noTitle, figureName, 3, U, 5, 11)
 
 axisNames = ['uMag/U', 'z/H']
 plotTitle = 'Time Averaged velocity magnitude at vertical YZ planes'
 figureName = 'UMeanYZPlanes_mag_Dirz'
-plotVar(UMean_05_11_Dirz, axisNames, plotTitle, figureName, 4, U, 5, 11)
+plotVar(UMean_05_11_Dirz, axisNames, noTitle, figureName, 4, U, 5, 11)
 
 ## lambVectorMean Dir_y_05_11
-axisNames = ['(x-x0)/L','lambVectorMag/U']
+axisNames = ['(x-x0)/L','lambVectorMean [m/s2]']
 plotTitle = 'Time Averaged Lamb Vector magnitude at vertical YZ planes'
 figureName = 'lambVectorMean_mag_Dir_y_05_11'
-plotVar(lambVectorMean_05_11_Diry, axisNames, plotTitle, figureName, 4, 1, 5, 11)
+plotVar(lambVectorMean_05_11_Diry, axisNames, noTitle, figureName, 4, 1, 5, 11)
 
 ## lambVectorMean Dir_z_05_11
 axisNames = ['lambVectorMean [m/s2]', 'z/H']
 plotTitle = 'Time Averaged Lamb Vector magnitude at vertical YZ planes'
 figureName = 'lambVectorMean_mag_Dir_z_05_11'
-plotVar(lambVectorMean_05_11_Dirz, axisNames, plotTitle, figureName, 4, 1, 5, 11)
+plotVar(lambVectorMean_05_11_Dirz, axisNames, noTitle, figureName, 4, 1, 5, 11)
 
 ## pMean Dir_y_05_11
 axisNames = ['(x-x0)/L',r'(pL)/($\rho$ U)']
 plotTitle = 'Time Averaged Pressure at vertical YZ planes'
 figureName = 'pMean_Dir_y_05_11'
-plotVar(pMean_05_11_Diry, axisNames, plotTitle, figureName, 1, L/(RHO*U), 5, 11)
+plotVar(pMean_05_11_Diry, axisNames, noTitle, figureName, 1, L/(RHO*U), 5, 11)
 
 ## pMean Dir_z_05_11
 axisNames = [r'(pL)/($\rho$ U)', 'z/H']
 plotTitle = 'Time Averaged Pressure at vertical YZ planes'
 figureName = 'pMean_Dir_z_05_11'
-plotVar(pMean_05_11_Dirz, axisNames, plotTitle, figureName, 1, L/(RHO*U), 5, 11)
+plotVar(pMean_05_11_Dirz, axisNames, noTitle, figureName, 1, L/(RHO*U), 5, 11)
 
 ## vorticity Dir_y_05_11
 axisNames = ['(x-x0)/L','vorticity[1/s]']
 plotTitle = 'Time Averaged vorticity magnitude at vertical YZ planes'
 figureName = 'vorticity_Dir_y_05_11'
-plotVar(vorticityMean_05_11_Diry, axisNames, plotTitle, figureName, 4, 1, 5, 11)
+plotVar(vorticityMean_05_11_Diry, axisNames, noTitle, figureName, 4, 1, 5, 11)
 
 ## vorticity Dir_z_05_11
 axisNames = ['vorticity [1/s]', 'z/H']
 plotTitle = 'Time Averaged vorticity magnitude at vertical YZ planes'
 figureName = 'vorticity_Dir_z_05_11'
-plotVar(vorticityMean_05_11_Dirz, axisNames, plotTitle, figureName, 4, 1, 5, 11)
+plotVar(vorticityMean_05_11_Dirz, axisNames, noTitle, figureName, 4, 1, 5, 11)
 
 
 # =============================================================================
@@ -785,111 +1019,111 @@ plotVar(vorticityMean_05_11_Dirz, axisNames, plotTitle, figureName, 4, 1, 5, 11)
 # Horizontal Planes Varying the Z axis from Z = 0 to Z = 0.10
 # =============================================================================
 ## RMean Dir_x_12_21
-axisNames = ['(x-x0)/L', r'Rmag/U^2']
+axisNames = ['(x-x0)/L', 'Rmag/$U^2$']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at horizontal XY planes'
 figureName = 'RMean_mag_Dir_x_12_21'
-plotVar(RMean_12_21_Dirx, axisNames, plotTitle, figureName, 7, U**2, 12, 21)
+plotVar(RMean_12_21_Dirx, axisNames, noTitle, figureName, 7, U**2, 12, 21)
 
 ## RMean Dir_y_12_21
-axisNames = ['(y-y0)/H', r'Rmag/U^2']
+axisNames = ['(y-y0)/H', 'Rmag/$U^2$']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at horizontal XY planes'
 figureName = 'RMean_mag_Dir_y_12_21'
-plotVar(RMean_12_21_Diry, axisNames, plotTitle, figureName, 7, U**2, 12, 21)
+plotVar(RMean_12_21_Diry, axisNames, noTitle, figureName, 7, U**2, 12, 21)
 
 ## UMean Dir_x_12_21
 axisNames = ['(x-x0)/L','u/U']
 plotTitle = 'Time Averaged x-velocity at horizontal XY planes'
 figureName = 'UMean_U_Dir_x_12_21'
-plotVar(UMean_12_21_Dirx, axisNames, plotTitle, figureName, 1, U, 12, 21)
+plotVar(UMean_12_21_Dirx, axisNames, noTitle, figureName, 1, U, 12, 21)
 
 axisNames = ['(x-x0)/L','v/U']
 plotTitle = 'Time Averaged y-velocity at horizontal XY planes'
 figureName = 'UMean_V_Dir_x_12_21'
-plotVar(UMean_12_21_Dirx, axisNames, plotTitle, figureName, 2, U, 12, 21)
+plotVar(UMean_12_21_Dirx, axisNames, noTitle, figureName, 2, U, 12, 21)
 
 axisNames = ['(x-x0)/L','w/U']
 plotTitle = 'Time Averaged z-velocity at horizontal XY planes'
 figureName = 'UMean_W_Dir_x_12_21'
-plotVar(UMean_12_21_Dirx, axisNames, plotTitle, figureName, 3, U, 12, 21)
+plotVar(UMean_12_21_Dirx, axisNames, noTitle, figureName, 3, U, 12, 21)
 
 axisNames = ['(x-x0)/L','uMag/U']
 plotTitle = 'Time Averaged velocity magnitude at horizontal XY planes'
 figureName = 'UMean_mag_Dir_x_12_21'
-plotVar(UMean_12_21_Dirx, axisNames, plotTitle, figureName, 4, U, 12, 21)
+plotVar(UMean_12_21_Dirx, axisNames, noTitle, figureName, 4, U, 12, 21)
 
 ## UMean Dir_y_12_21
 axisNames = ['(y-y0)/H','u/U']
 plotTitle = 'Time Averaged x-velocity at horizontal XY planes'
 figureName = 'UMean_U_Dir_y_12_21'
-plotVar(UMean_12_21_Diry, axisNames, plotTitle, figureName, 1, U, 12, 21)
+plotVar(UMean_12_21_Diry, axisNames, noTitle, figureName, 1, U, 12, 21)
 
 axisNames = ['(y-y0)/H','v/U']
 plotTitle = 'Time Averaged y-velocity at horizontal XY planes'
 figureName = 'UMean_V_Dir_y_12_21'
-plotVar(UMean_12_21_Diry, axisNames, plotTitle, figureName, 2, U, 12, 21)
+plotVar(UMean_12_21_Diry, axisNames, noTitle, figureName, 2, U, 12, 21)
 
 axisNames = ['(y-y0)/H','w/U']
 plotTitle = 'Time Averaged z-velocity at horizontal XY planes'
 figureName = 'UMean_W_Dir_y_12_21'
-plotVar(UMean_12_21_Diry, axisNames, plotTitle, figureName, 3, U, 12, 21)
+plotVar(UMean_12_21_Diry, axisNames, noTitle, figureName, 3, U, 12, 21)
 
 axisNames = ['(y-y0)/H','uMag/U']
 plotTitle = 'Time Averaged velocity magnitude at horizontal XY planes'
 figureName = 'UMean_mag_Dir_y_12_21'
-plotVar(UMean_12_21_Diry, axisNames, plotTitle, figureName, 4, U, 12, 21)
+plotVar(UMean_12_21_Diry, axisNames, noTitle, figureName, 4, U, 12, 21)
 
 ## lambVectorMean Dir_y_12_21
-axisNames = ['(x-x0)/L','lambVectorMag/U']
+axisNames = ['(x-x0)/L','lambVectorMean [m/s2]']
 plotTitle = 'Time Averaged Lamb Vector magnitude at horizontal XY planes'
 figureName = 'lambVectorMean_mag_Dir_y_12_21'
-plotVar(lambVectorMean_12_21_Diry, axisNames, plotTitle, figureName, 4, 1, 12, 21)
+plotVar(lambVectorMean_12_21_Diry, axisNames, noTitle, figureName, 4, 1, 12, 21)
 
 ## lambVectorMean Dir_z_12_21
 axisNames = ['lambVectorMean [m/s2]', 'z/H']
 plotTitle = 'Time Averaged Lamb Vector magnitude at horizontal XY planes'
 figureName = 'lambVectorMean_mag_Dir_z_12_21'
-plotVar(lambVectorMean_12_21_Diry, axisNames, plotTitle, figureName, 4, 1, 12, 21)
+plotVar(lambVectorMean_12_21_Diry, axisNames, noTitle, figureName, 4, 1, 12, 21)
 
 ## pMean Dir_y_12_21
 axisNames = ['(x-x0)/L',r'(pL)/($\rho$ U)']
 plotTitle = 'Time Averaged Pressure at horizontal XY planes'
 figureName = 'pMean_Dir_y_12_21'
-plotVar(pMean_12_21_Diry, axisNames, plotTitle, figureName, 1, L/(RHO*U), 12, 21)
+plotVar(pMean_12_21_Diry, axisNames, noTitle, figureName, 1, L/(RHO*U), 12, 21)
 
 ## pMean Dir_z_12_21
 axisNames = [r'(pL)/($\rho$ U)', 'z/H']
 plotTitle = 'Time Averaged Pressure at horizontal XY planes'
 figureName = 'pMean_Dir_z_12_21'
-plotVar(pMean_12_21_Diry, axisNames, plotTitle, figureName, 1, L/(RHO*U), 12, 21)
+plotVar(pMean_12_21_Diry, axisNames, noTitle, figureName, 1, L/(RHO*U), 12, 21)
 
 ## vorticity Dir_y_12_21
 axisNames = ['(x-x0)/L','vorticity[1/s]']
 plotTitle = 'Time Averaged vorticity magnitude at horizontal XY planes'
 figureName = 'vorticity_Dir_y_12_21'
-plotVar(vorticityMean_12_21_Diry, axisNames, plotTitle, figureName, 4, 1, 12, 21)
+plotVar(vorticityMean_12_21_Diry, axisNames, noTitle, figureName, 4, 1, 12, 21)
 
 ## vorticity Dir_z_12_21
 axisNames = ['vorticity [1/s]', 'z/H']
 plotTitle = 'Time Averaged vorticity magnitude at horizontal XY planes'
 figureName = 'vorticity_Dir_z_12_21'
-plotVar(vorticityMean_12_21_Diry, axisNames, plotTitle, figureName, 4, 1, 12, 21)
+plotVar(vorticityMean_12_21_Diry, axisNames, noTitle, figureName, 4, 1, 12, 21)
 
 # =============================================================================
 # Validation Graph
 # =============================================================================
 
 # Figure 4
-fig4, ax4 = plt.subplots(figsize=(9,6), dpi=120)
+fig4, ax4 = plt.subplots(figsize=(9,6), dpi=300)
 ax4.plot(literatureExp.iloc[:,0], literatureExp.iloc[:,1],'k.',
          label='Experimental')
-ax4.plot(literatureLES.iloc[:,0], literatureLES.iloc[:,1],
+ax4.plot(literatureLES.iloc[:,0], literatureLES.iloc[:,1],'--',
          label='Xiang et al. (2019)')
-ax4.plot(fig4aOur.iloc[:,0], fig4aOur.u,label='Our')
+ax4.plot(fig4aOur.iloc[:,0], fig4aOur.u,label='Presented Model')
 
 ax4.legend(loc='best',fontsize='x-large')
 
-ax4.set_title('Time Averaged x-velocity at 0.6H'
-             ,fontsize='xx-large')
+#ax4.set_title('Time Averaged x-velocity at 0.6H'
+#             ,fontsize='xx-large')
 
 plt.grid()
 plt.autoscale(enable=True, tight=True)
@@ -898,14 +1132,14 @@ plt.ylabel('u/U',fontsize='x-large')
 plt.savefig('preTreatment/results/Plot/figure4.png', bbox_inches='tight')
 
 # Mass Decay
-figm, axm = plt.subplots(figsize=(9,6), dpi=120)
+figm, axm = plt.subplots(figsize=(9,6), dpi=300)
 axm.plot(tracerData.time,modelmass,label='Fitted Curve',color='r')
 axm.plot(tracerData.time,tracerData.tracerVol,label='Numerical')
 
 axm.legend(loc='best',fontsize='x-large')
 
-axm.set_title('Mass Ejection from Groyne Field Volume'
-             ,fontsize='xx-large')
+#axm.set_title('Mass Ejection from Groyne Field Volume'
+#             ,fontsize='xx-large')
 
 at = AnchoredText('C(t)=$C_{0}$$e^{-t/Td}$\n$k_{ajusted}$ = %.4f' % k,
                   prop=dict(size=15), frameon=True,
@@ -919,27 +1153,279 @@ plt.xlabel('t [s]',fontsize='x-large')
 plt.ylabel('Concentration [non-dimensional]',fontsize='x-large')
 plt.savefig('preTreatment/results/Plot/massDecay.png', bbox_inches='tight')
 
-del figm, axm, at, fig4, ax4, axisNames, plotTitle, figureName
+del figm, axm, at, fig4, ax4, axisNames, noTitle, figureName , plotTitle
 
 \end{lstlisting}
+\subsection{thickness.py}
+\begin{lstlisting}[language=python]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+#  thickness.py
+#  
+#  Copyright 2020 Luiz Oliveira
+#  
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#  
+#  
+
+"""
+Data related to the mixing layer thickness is calculated in this module
+"""
+
+import re
+import numpy as np
+import pandas as pd
+
+def clearLimits(df,x0,x1,y0,y1,z0,z1):
+# =============================================================================
+#     Clear extra values inside variables.
+#     This script uses user values of the bound coordinates
+# =============================================================================
+
+    df.drop(df[df.x < x0].index, inplace=True)
+    df.drop(df[df.x > x1].index, inplace=True)
+    df.drop(df[df.y < y0].index, inplace=True)
+    df.drop(df[df.y > y1].index, inplace=True)
+    df.drop(df[df.z < z0].index, inplace=True)
+    df.drop(df[df.z > z1].index, inplace=True)
+    return df
+
+def dfRename(var, dtf):
+    names = ['x', 'y', 'z']
+    names.extend(var)
+    dtf.columns = names
+    
+def excelExport(var, name):
+# =============================================================================
+#     Creates and appends planes into an spreadsheet
+# =============================================================================
+    
+    if not os.path.isfile('preTreatment/results/Excel/'+name+'.xlsx'):
+        wb = openpyxl.Workbook()
+        wb.save('preTreatment/results/Excel/'+name+'.xlsx')
+
+    with pd.ExcelWriter('preTreatment/results/Excel/'+name+'.xlsx',
+                        engine="openpyxl", mode='a') as writer:
+        for df_name, df in var.items():
+            df.to_excel(writer, sheet_name=df_name, index=False)
+
+def ui(planes, physicalVar, colNames, nColumns, first, last):
+# =============================================================================
+#     Treats data in an ensemble averaging proceedure in the provided direction
+# =============================================================================
+
+    # Local Variable Declaration
+    varDict = dict()
+    kk = first * nColumns
+    startPos = first
+    stopPos = last * nColumns
+    ll = 0
+  
+    # Reads all the files and ensemble in a dict in that each ii is a plane
+    for ii in planes:
+        key = ii
+        key = int(re.sub('\D', '',key))
+        if key < startPos:
+            continue
+        if kk > stopPos: 
+            break
+        for jj in range(nColumns):
+            ll = kk + jj
+            if ll%nColumns == 0: # number of columns
+                varDict[ii] = physicalVar.iloc[:,ll]
+            else:
+                varDict[ii] = \
+                    pd.concat([varDict[ii], physicalVar.iloc[:,ll]], axis=1)
+                    
+        kk = kk + nColumns
+
+        dfRename(colNames, varDict[ii])
+        clearLimits(varDict[ii], 0.25, 0.50, 0, 0.45, 0, 0.1)
+        varDict[ii] = varDict[ii].dropna(axis=0, how='all')
+        varDict[ii] = varDict[ii].dropna(axis=1, how='all')
+        varDict[ii].drop(columns=['y','v', 'w'], inplace=True)
+    return varDict['p00']
+    
+
+# =============================================================================
+# Mixing Layer Thickness Calculation
+# =============================================================================
+clearLimits(thickness['raw'], 0.25, 0.50, 0, 0.45, 0, 0.1)
+thickness['raw'].x = thickness['raw'].x - 0.25
+
+numZPlanes = 1
+numXPlanes = 8
+
+xMax = max(thickness['raw'].x)
+zMax = max(thickness['raw'].z)
+
+xtol = round(xMax/((numXPlanes + 1)*16), 6)
+ztol = round(zMax/((numZPlanes + 1)*16), 6)
+
+zz = zMax/(numZPlanes + 1)
+aux = thickness['raw']
+for ii in range(numZPlanes):
+    xx = 0
+    nameZ = 'z' + str(ii)
+    thickness[nameZ] = dict()
+    for jj in range(numXPlanes+2): #Origin and Destination
+        nameX = 'x' + str(jj)
+        xlim = [xx-xtol, xx+xtol]
+        zlim = [zz-ztol, zz+ztol]
+        thickness[nameZ][nameX] = dict()
+        aux2 = aux[np.logical_and(\
+                  np.logical_and(aux['z'] > zlim[0], aux['z'] < zlim[1]),\
+                  np.logical_and(aux['x'] > xlim[0], aux['x'] < xlim[1]))]
+        thickness[nameZ][nameX]['cav'] = aux2[aux2['y'] > 0.3].mean()
+        thickness[nameZ][nameX]['channel'] = aux2[aux2['y'] < 0.3].mean()
+        thickness[nameZ][nameX]['absGradient'] = max(aux2['absGradient'])
+        
+        xx = xx + xMax/(numXPlanes + 1)
+    zz = zz + zMax/(numZPlanes + 1)
+
+del ii, jj, aux, aux2, xx, zz, nameX, nameZ, xlim, zlim                   
+
+# Organise data by planes
+aux = thickness
+thickness = dict()
+zz = zMax/(numZPlanes + 1)
+for ii in range(numZPlanes):
+    xx = 0
+    nameZ = 'z' + str(ii)
+    thickness[nameZ] = dict()
+    for jj in range(numXPlanes+2):
+        nameX = 'x' + str(jj)
+        if 'Ue' not in thickness[nameZ].keys():
+            thickness[nameZ]['Ue'] = aux[nameZ][nameX]['cav'].to_frame().transpose()
+            thickness[nameZ]['Um'] = aux[nameZ][nameX]['channel'].to_frame().transpose()
+            thickness[nameZ]['maxGrad'] = dict() #k: x coord v: maxGrad
+        else:
+            thickness[nameZ]['Ue'] = thickness[nameZ]['Ue']\
+            .append(aux[nameZ][nameX]['cav'].to_frame().transpose(),\
+                    ignore_index = True)
+            thickness[nameZ]['Um'] = thickness[nameZ]['Um']\
+            .append(aux[nameZ][nameX]['channel'].to_frame().transpose(),\
+                    ignore_index = True)
+        thickness[nameZ]['maxGrad'][jj] = [aux[nameZ][nameX]['absGradient']]
+        xx = xx + xMax/(numXPlanes + 1)
+    thickness[nameZ]['Ue'].drop(columns=['y','absGradient'], inplace = True)
+    thickness[nameZ]['Um'].drop(columns=['y','absGradient'], inplace = True)
+    ue = ['x','z','Ue']
+    um = ['x','z','Um']
+    thickness[nameZ]['Ue'].columns = ue
+    thickness[nameZ]['Um'].columns = um
+    thickness[nameZ]['U'] = thickness[nameZ]['Ue']
+    thickness[nameZ]['U']['Um'] = thickness[nameZ]['Um']['Um']
+    thickness[nameZ]['maxGrad'] = pd.DataFrame(data=thickness[nameZ]['maxGrad'])
+    thickness[nameZ] = thickness[nameZ]['U'].join(thickness[nameZ]['maxGrad'].\
+             transpose())
+    colNames = ['x','z','Ue','Um','maxGrad']
+    thickness[nameZ].columns = colNames
+    zz = zz + zMax/(numZPlanes + 1)
+
+del ii, jj, ue, um, colNames  
+
+# Calculates and appends Ui
+colNames = ['u', 'v', 'w']
+Uinterface = ui(uniqueRaw, UMean, colNames, 6, 0, 0)
+Uinterface.x = Uinterface.x - 0.25
+
+del colNames, UMean
+
+zz = zMax/(numZPlanes + 1)
+aux = Uinterface
+Uinterface = dict()
+for ii in range(numZPlanes):
+    xx = 0
+    nameZ = 'z' + str(ii)
+    Uinterface[nameZ] = dict()
+    for jj in range(numXPlanes+2): #Origin and Destination
+        nameX = 'x' + str(jj)
+        xlim = [xx-xtol, xx+xtol]
+        zlim = [zz-ztol, zz+ztol]
+        aux2 = aux[np.logical_and(\
+                  np.logical_and(aux['z'] > zlim[0], aux['z'] < zlim[1]),\
+                  np.logical_and(aux['x'] > xlim[0], aux['x'] < xlim[1]))]
+        Uinterface[nameZ][nameX] = aux2.mean()
+
+        xx = xx + xMax/(numXPlanes + 1)
+    zz = zz + zMax/(numZPlanes + 1)
+    
+del ii, jj, aux, aux2, xx, zz, xtol, ztol, nameX, nameZ, xlim, zlim
+
+# Organise data by planes
+aux = Uinterface
+Uinterface = dict()
+zz = zMax/(numZPlanes + 1)
+for ii in range(numZPlanes):
+    xx = 0
+    nameZ = 'z' + str(ii)
+    Uinterface[nameZ] = dict()
+    for jj in range(numXPlanes+2):
+        nameX = 'x' + str(jj)
+        Uinterface[nameZ][jj] = [aux[nameZ][nameX]['u']]
+        xx = xx + xMax/(numXPlanes + 1)
+        
+    Uinterface[nameZ] = pd.DataFrame(data=Uinterface[nameZ]).transpose()
+    try:
+        thickness[nameZ].insert(3,'Ui',Uinterface[nameZ])
+        thickness[nameZ].eval('internalThickness = (Ui-Ue)/maxGrad', inplace=True)
+        thickness[nameZ].eval('externalThickness = (Um-Ui)/maxGrad', inplace=True)
+        thickness[nameZ].eval('totalThickness = internalThickness + externalThickness',\
+                 inplace=True)
+        thickness[nameZ].eval('deltaInPerW = internalThickness/@W', inplace=True)
+        thickness[nameZ].eval('deltaOutPerW = externalThickness/@W', inplace=True)
+        thickness[nameZ].eval('deltaTotalPerW = totalThickness/@W', inplace=True)
+    except:pass
+    zz = zz + zMax/(numZPlanes + 1)
+
+del ii, jj, zz, aux, Uinterface, nameX, nameZ
+
+# Save to Excel
+excelExport(thickness, 'thickness')
+
+\end{lstlisting}
+
 \section{dataAnalysis Scripts}
 \subsection{multipleSimulationImport.py}
 \begin{lstlisting}[language=python]
-#!/usr/bin/env python3
+##!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Libraries
 import os
 import re
 import pandas as pd
+import openpyxl
 
 files = os.listdir('treatment')
+folder = os.path.abspath('treatment')
 
 # Check for csv files
 csvFiles = list()
 for item in files:
     if re.search('.\.csv', item):
         csvFiles.append(item)
+        
+# Check for xlsx files
+xlsxFiles = list()
+for item in files:
+    if re.search('.\.xlsx', item):
+        xlsxFiles.append(item)
 
 # Check for txt files
 txtFiles = list()
@@ -948,29 +1434,46 @@ for item in files:
         txtFiles.append(item)
 
 # Import generated data
+uniqueSim = list()
+uniqueVar = list()
+xlsxVar = list()
+direction = list()
+planes = list()
+data = dict()
+
 for item in csvFiles:
-    if re.search('.horizontalVelocity.', item):
-        aux = pd.read_csv('treatment/'+item, header=0, usecols=['Y','UMean'])
-        try:
-            horizontalVelocity = pd.concat([horizontalVelocity,aux],
-                                           ignore_index=True, axis=1)
-            hVelFiles.append(item)
-        except:
-            horizontalVelocity = aux
-            hVelFiles = [item]
-            
-    elif re.search('.interfaceVelocity.', item):
-        aux = pd.read_csv('treatment/'+item, header=0, usecols=['X','UMean'])
-        try:
-            interfaceVelocity = pd.concat([interfaceVelocity,aux],
-                                          ignore_index=True, axis=1)
-            iVelFiles.append(item)
-        except:
-            interfaceVelocity = aux
-            iVelFiles = [item]
+    try:
+        sim = re.split("_", item)[0]
+        variableName = re.split("_", item)[1]
+        plane = re.split("_", item)[2]
+        axis = re.split("_", item)[4]
+        axis = axis[:-4] #Removes '.csv'
+        if sim not in uniqueSim:
+            uniqueSim.append(sim)
+        if variableName not in uniqueVar:
+            uniqueVar.append(variableName)
+        if axis not in direction:
+            direction.append(axis)
+        if plane not in planes:
+            planes.append(plane)
+        del variableName, axis, plane
+    except:
+        continue
+
+for item in xlsxFiles:
+    try:
+        sim = re.split("_", item)[0]
+        variableName = re.split("_", item)[1]
+        variableName = variableName[:-5]
+        if sim not in uniqueSim:
+            uniqueSim.append(sim)
+        if variableName not in xlsxVar:
+            xlsxVar.append(variableName)
+    except:
+        continue
 
 for item in txtFiles:
-    file = open('treatment/'+item, "r")
+    file = open(os.path.join(folder, item), "r")
     for line in file:
         if re.search('ktracer.', line):
             words = line.split()
@@ -980,158 +1483,743 @@ for item in txtFiles:
             words = line.split()
             kvelocity = float(words[2])
 
-    d = {'Simulation':[item[0:4]], 'kTracer':[ktracer], 'kVelocity':[kvelocity]}
+    d = {'Simulation':[re.split("_", item)[0]], 'kTracer':[ktracer], 'kVelocity':[kvelocity]}
     df = pd.DataFrame(data=d)
-    
-    try:
+
+    if 'massExchange' in locals() or 'massExchange' in globals():
         massExchange = massExchange.append(df, ignore_index=True)
-    except:
+    else:
         massExchange = df
+        
+    del item, d, df, words, line
+    del ktracer, kvelocity
 
+for var in uniqueVar:
+    data[var] = dict()
+    for sim in uniqueSim:
+        data[var][sim] = dict()
+        for plane in planes:
+            data[var][sim][plane] = dict()
+            for axis in direction:
+                file = sim+"_"+var+"_"+plane+"_Dir_"+axis+".csv"
+                pathToFile = os.path.join(folder, file)
+                if os.path.exists(pathToFile):
+                    data[var][sim][plane][axis] = pd.read_csv(pathToFile,\
+                        index_col=0, float_precision="high")
 
-del aux, files, item, d, df, iVelFiles,hVelFiles, txtFiles, words, line, file
-del ktracer, kvelocity, csvFiles
+thickness = dict()
+for sim in uniqueSim:
+    file = sim+"_thickness.xlsx"
+    pathToFile = os.path.join(folder, file)
+    if os.path.exists(pathToFile):
+        thickness[sim] = pd.read_excel(pathToFile)
+
+#del files, txtFiles, file, csvFiles, plane, var, sim, axis, pathToFile, direction
+
 \end{lstlisting}
 \subsection{multipleSimulationProcess.py}
 \begin{lstlisting}[language=python]
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
+import openpyxl
 import pandas as pd
 
 # Append densities to mass exchange
-densities = pd.read_csv('treatment/densities.csv')
-densities = densities.set_index('Simulation')
-massExchange = massExchange.set_index('Simulation', drop=False)
-massExchange = massExchange.join(densities)
+try:
+    densities = pd.read_csv(os.path.join(folder,'densities.csv'),index_col=0)
+except:
+    print("Imported Simulations:\n",uniqueSim)
+    print("Please enter the vegetation density of each simulation:")
+    density = dict()
+    for sim in uniqueSim:
+        density[sim] = float(input(sim+":"))
+    densities = pd.DataFrame.from_dict(density, orient = 'index')
+    densities.reset_index(level=0, inplace=True)
+    colName = ['Simulation','Density']
+    densities.columns = colName
+    densities.to_csv(os.path.join(folder,'densities.csv'))
+    del sim, colName
+
+try:
+    massExchange.insert(1,'Veg. Density',densities['Density'])
+except:
+    pass
+massExchange.style.format({'Veg. Density': "{:.4%}"})
+massExchange.sort_values(by=['Veg. Density'], inplace=True)
+
+massExchange['Case'] = range(len(massExchange))
 
 # Retrieve mean residence time
-tTracer = 1/massExchange.kTracer
-tVelocity = 1/massExchange.kVelocity
+massExchange.eval('mrtTracer = 1/kTracer', inplace=True)
+massExchange.eval('mrtVelocity = 1/kVelocity', inplace=True)
 
-massExchange['tTracer'] = tTracer
-massExchange['tVelocity'] = tVelocity
+fileName = os.path.join(folder,'results/CSV/massExchange.xlsx')
+massExchange.to_excel(fileName, index=False)
 
-massExchange = massExchange[['Simulation', 'Densities', 'kTracer', 'kVelocity',
-                               'tTracer', 'tVelocity']]
+densities.sort_values(by=['Density'], inplace=True)
+densities.reset_index(drop=True, inplace=True)
+del fileName
 
-del tTracer, tVelocity
+# Mixing Layer Thickness
+try:
+    for sim in uniqueSim:
+        thickness[sim].eval('xL = x/0.25', inplace=True)
+        thickness[sim].rename(columns={'xL':'(x-x0)/L'}, inplace=True)
+except:pass
+
 \end{lstlisting}
 \subsection{multipleSimulationPlot.py}
 \begin{lstlisting}[language=python]
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+#  multipleSimulationPlot.py
+#  
+#  Copyright 2020 Luiz Oliveira
+#  
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#  
+#  
 
+"""
+Data is imported from multipleSimulationProcess.py and ploted into jpg figures
+"""
+
+# Libraries
+import os
 import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
 
-# Horizontal Velocity
-fig, ax = plt.subplots(figsize=(9,6), dpi=120)
+#plt.rcParams.update({
+#    "text.usetex": True,
+#    "font.family": "sans-serif",
+#    "font.sans-serif": ["Helvetica"]})
 
-for line in range(0, len(horizontalVelocity.columns),2):
-    try:
-        i += 1
-    except:
-        i = 0
-    ax.plot(horizontalVelocity[line],horizontalVelocity[line+1],
-            label=massExchange.Simulation[i])
+figFolder = os.path.abspath('treatment/results/Plots')
+selFigFolder = os.path.abspath('treatment/results/SelectPlots')
+
+def plotVar(varName, axis, title, col, admensional):
+# =============================================================================
+#     Runs through all plots from a variable and plots it
+# =============================================================================
     
-ax.legend(loc='best',fontsize='x-large')
-
-ax.set_title('Time Averaged x-velocity at 0.6H'
-             ,fontsize='xx-large')
-
-plt.grid()
-plt.autoscale(enable=True, tight=True)
-plt.xlabel('(y-y0)/H',fontsize='x-large')
-plt.ylabel('u/U',fontsize='x-large')
-plt.savefig('treatment/results/horizontalVelocity.png')
-del fig, ax, i, line
-
-## Save processed data into csv
-horizontalVelocity.to_csv('treatment/results/horizontalVelocity.csv', index=False)
-
-# Interface Velocity
-fig, ax = plt.subplots(figsize=(9,6), dpi=120)
-
-for line in range(0, len(interfaceVelocity.columns),2):
-    try:
-        i += 1
-    except:
-        i = 0
-    ax.plot(interfaceVelocity[line],interfaceVelocity[line+1],
-            label=massExchange.Simulation[i])
+    for plane in planes:
+        anySim = uniqueSim[0]
+        for direction in data[varName][anySim][plane].keys():
+            fig, ax = plt.subplots(figsize=(9,6), dpi=300)
+            for sim in uniqueSim:
+                df = data[varName][sim][plane][direction]
+                lbl = densities.loc[densities['Simulation'] == sim]
+                lbl = lbl['Density'].iloc[0]
+                ax.plot(df.iloc[:,0], df.iloc[:,col]/admensional,
+                        label='{:.4%}'.format(lbl))
     
-ax.legend(loc='best',fontsize='x-large')
+            ax.legend(loc='best',fontsize='x-large')
+            if title != "None":
+                ax.set_title(title,fontsize='xx-large')
+            if direction == 'x':
+                axis[0] = '(x-x0)/L'
+            elif direction == 'y':
+                axis[0] = '(y-yo)/H'
+            elif direction == 'z':
+                axis[0] = 'z/H'
+                
+            plt.grid()
+            plt.autoscale(enable=True, tight=True)
+            plt.xlabel(axis[0],fontsize='x-large')
+            plt.ylabel(axis[1],fontsize='x-large')
+            
+            # Save the image in memory in JPG format
+            figName = varName+'_'+plane+'_Dir_'+direction+'.jpg'
+            figName = os.path.join(figFolder, figName)
+            plt.savefig(figName, box_inches='tight')
+            plt.close()
 
-ax.set_title('Time Averaged y-velocity at the Interface with the Main Channel'
-             ,fontsize='xx-large')
+# =============================================================================
+# Variables
+# =============================================================================
 
-plt.grid()
-plt.autoscale(enable=True, tight=True)
-plt.xlabel('x/L',fontsize='x-large')
-plt.ylabel('v/U',fontsize='x-large')
-plt.savefig('treatment/results/interfaceVelocity.png')
-del fig, ax, i, line
+noTitle = "None"
+            
+## RMean
+axisNames = ['(x-x0)/L','Rmag/$U^2$']
+plotTitle = 'Time Averaged Reynolds Stresses Magnitude'
+plotVar('RMean', axisNames, noTitle, 7, U**2)
 
-## Save processed data into csv
-interfaceVelocity.to_csv('treatment/results/interfaceVelocity.csv', index=False)
+## UMean
+axisNames = ['(x-x0)/L','uMag/U']
+plotTitle = 'Time Averaged velocity magnitude'
+plotVar('UMean', axisNames, noTitle, 4, U)
 
+axisNames = ['(x-x0)/L','u/U']
+plotTitle = 'Time Averaged velocity magnitude'
+plotVar('UMean', axisNames, noTitle, 1, U)
+
+axisNames = ['(x-x0)/L','v/U']
+plotTitle = 'Time Averaged velocity magnitude'
+plotVar('UMean', axisNames, noTitle, 2, U)
+
+axisNames = ['(x-x0)/L','w/U']
+plotTitle = 'Time Averaged velocity magnitude'
+plotVar('UMean', axisNames, noTitle, 3, U)
+
+## lambVectorMean
+axisNames = ['(x-x0)/L','lambVectorMag']
+plotTitle = 'Time Averaged Reynolds Stresses Magnitude'
+plotVar('lambVectorMean', axisNames, noTitle, 4, 1)
+
+## pMean
+axisNames = ['(x-x0)/L',r'(pL)/($\rho$ U)']
+plotTitle = 'Time Averaged Reynolds Stresses Magnitude'
+plotVar('pMean', axisNames, noTitle, 1, L/(RHO*U))
+
+## vorticity
+axisNames = ['z/H', 'vorticity [1/s]']
+plotTitle = 'Time Averaged vorticity magnitude'
+plotVar('vorticityMean', axisNames, noTitle, 4, 1)
+
+# =============================================================================
 # Mass Exchange
-massExchange = massExchange.set_index('Densities', drop=False)
-massExchange = massExchange.sort_values(by='kTracer', ascending=False)
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+ax1 = ax.twinx()
 
-fig, ax = plt.subplots(figsize=(9,6), dpi=120)
-ax.plot(massExchange.index,massExchange.kTracer, '^', label='Tracer')
-ax.plot(massExchange.index,massExchange.kVelocity,'o',
-        label='Interface Velocity')
+#for sim in uniqueSim:
+#    case = massExchange.loc[massExchange['Simulation'] == sim]
+#    vDensity = case['Veg. Density'].iloc[0]*100
+#    caseName = 'Case '+str(densities.loc[densities['Simulation'] == sim].index[0])
+    
+ln1 = ax.plot(massExchange['Veg. Density']*100, massExchange['kTracer'], 'ko-',
+        label=r'$k_{DZ}$', lw=2, ms=6)
+ln2 = ax1.plot(massExchange['Veg. Density']*100, massExchange['mrtTracer'], 'ks--', 
+         label=r'$T_{DZ}$', lw=2, ms=5)
+    
+# Primary Axis
+#ax.set_xlabel('Vegetation Density [%]',fontsize='x-large')
+#ax.set_ylabel('Mass Exchange Coefficient [non-dimensional]',fontsize='x-large')
+ax.set_xlabel('a [%]',fontsize='x-large')
+ax.set_ylabel('k [non-dimensional]',fontsize='x-large')
+ax.set_xlim(0, 11)
 
-ax.legend(loc='best',fontsize='x-large')
+# Secondary Axis
+ax1.set_ylabel(r'$T_{DZ}$ [s]',fontsize='x-large')
 
-ax.set_title('Mass Exchange Coefficients versus Vegetation Density'
-             ,fontsize='xx-large')
-
-plt.grid()
 plt.autoscale(enable=True)
-plt.xlabel('Vegetation Density',fontsize='x-large')
-plt.ylabel('Mass Exchange Coefficient (k)',fontsize='x-large')
-plt.savefig('treatment/results/massExchange.png')
-del fig, ax
 
-## Save processed data into csv
-massExchange = massExchange.set_index('Simulation')
-massExchange.to_csv('treatment/results/massExchange.csv')
+# Legend
+lns = ln1+ln2
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs, loc=7)
 
-# Residence Time
-fig, ax = plt.subplots(figsize=(9,6), dpi=120)
-ax.plot(massExchange.Densities,massExchange.tTracer, '^',label='Tracer')
-ax.plot(massExchange.Densities,massExchange.tVelocity, 'o',
-        label='Interface Velocity')
+#plt.legend(bbox_to_anchor=(1.15,1), loc="upper left")
+#plt.tight_layout(rect=[0,0,0.75,1])
+#ax.set_title('Mass Exchange variation through all vegetation densities',
+#             fontsize='xx-large')
+#plt.subplots_adjust(right=0.7)
 
-ax.legend(loc='best',fontsize='x-large')
+# Save the image in memory in JPG format
+figName = 'massExchange.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
 
-ax.set_title('Mean Residence Time versus Vegetation Density'
-             ,fontsize='xx-large')
+del lns, ln1, ln2, ax, fig, labs
 
-plt.grid()
+# =============================================================================
+# Y-Velocity at Interface versus z/H Unique
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln0 = ax.plot(data['UMean']['x068']['p00']['z']['v']/U,
+              data['UMean']['x068']['p00']['z']['z/H'],
+              '-', label='Case 0', lw=2, ms=6)
+ln1 = ax.plot(data['UMean']['x062']['p00']['z']['v']/U,
+              data['UMean']['x062']['p00']['z']['z/H'],
+              '--', label='Case 1', lw=2, ms=6)
+ln2 = ax.plot(data['UMean']['x063']['p00']['z']['v']/U,
+              data['UMean']['x063']['p00']['z']['z/H'],
+              '-.', label='Case 2', lw=2, ms=6)
+ln3 = ax.plot(data['UMean']['x064']['p00']['z']['v']/U,
+              data['UMean']['x064']['p00']['z']['z/H'],
+              ':', label='Case 3', lw=2, ms=6)
+ln4 = ax.plot(data['UMean']['x065']['p00']['z']['v']/U,
+              data['UMean']['x065']['p00']['z']['z/H'],
+              '-.', label='Case 4', lw=2, ms=6)
+ln5 = ax.plot(data['UMean']['x066']['p00']['z']['v']/U,
+              data['UMean']['x066']['p00']['z']['z/H'],
+              '--', label='Case 5', lw=2, ms=6)
+ln6 = ax.plot(data['UMean']['x067']['p00']['z']['v']/U,
+              data['UMean']['x067']['p00']['z']['z/H'],
+              '--', label='Case 6', lw=2, ms=6)
+ln7 = ax.plot(data['UMean']['x115']['p00']['z']['v']/U,
+              data['UMean']['x115']['p00']['z']['z/H'],
+              '-.', label='Case 7', lw=2, ms=6)
+ln8 = ax.plot(data['UMean']['x116']['p00']['z']['v']/U,
+              data['UMean']['x116']['p00']['z']['z/H'],
+              ':', label='Case 8', lw=2, ms=6)
+ln9 = ax.plot(data['UMean']['x117']['p00']['z']['v']/U,
+              data['UMean']['x117']['p00']['z']['z/H'],
+              '-.', label='Case 9', lw=2, ms=6)
+ln10 = ax.plot(data['UMean']['x115']['p00']['z']['v']/U,
+              data['UMean']['x115']['p00']['z']['z/H'],
+              '--', label='Case 10', lw=2, ms=6)
+
+# Primary Axis
+ax.set_xlabel('v/U',fontsize='x-large')
+ax.set_ylabel('z/H',fontsize='x-large')
+
 plt.autoscale(enable=True)
-plt.xlabel('Vegetation Density',fontsize='x-large')
-plt.ylabel('Mean Residence Time [s]',fontsize='x-large')
-plt.savefig('treatment/results/meanResidenceTime.png')
-del fig, ax
-
-# k versus k
-fig, ax = plt.subplots(figsize=(9,6), dpi=120)
-ax.plot(massExchange.kVelocity,massExchange.kTracer, '^')
-
-x = np.linspace(*ax.get_xlim())
-ax.plot(x, x,'k')
-
 plt.grid()
+
+# Legend
+lns = ln0+ln1+ln2+ln3+ln4+ln5+ln6+ln7+ln8+ln9+ln10
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs, loc=7)
+
+# Save the image in memory in JPG format
+figName = 'yVelatInterfaceZAxis.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
+# =============================================================================
+# Y-Velocity at Interface versus z/H 1
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln0 = ax.plot(data['UMean']['x068']['p00']['z']['v']/U,
+              data['UMean']['x068']['p00']['z']['z/H'],
+              '-', label='Case 0', lw=2, ms=6)
+ln1 = ax.plot(data['UMean']['x062']['p00']['z']['v']/U,
+              data['UMean']['x062']['p00']['z']['z/H'],
+              '--', label='Case 1', lw=2, ms=6)
+ln2 = ax.plot(data['UMean']['x063']['p00']['z']['v']/U,
+              data['UMean']['x063']['p00']['z']['z/H'],
+              '-.', label='Case 2', lw=2, ms=6)
+ln3 = ax.plot(data['UMean']['x064']['p00']['z']['v']/U,
+              data['UMean']['x064']['p00']['z']['z/H'],
+              ':', label='Case 3', lw=2, ms=6)
+ln4 = ax.plot(data['UMean']['x065']['p00']['z']['v']/U,
+              data['UMean']['x065']['p00']['z']['z/H'],
+              '-.', label='Case 4', lw=2, ms=6)
+ln5 = ax.plot(data['UMean']['x066']['p00']['z']['v']/U,
+              data['UMean']['x066']['p00']['z']['z/H'],
+              '--', label='Case 5', lw=2, ms=6)
+    
+# Primary Axis
+ax.set_xlabel('v/U',fontsize='x-large')
+ax.set_ylabel('z/H',fontsize='x-large')
+
 plt.autoscale(enable=True)
-plt.xlabel('kVelocity',fontsize='x-large')
-plt.ylabel('kTracer',fontsize='x-large')
-plt.savefig('treatment/results/KvsK.png')
-del fig, ax
+plt.grid()
+
+# Legend
+lns = ln0+ln1+ln2+ln3+ln4+ln5
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs, loc=7)
+
+# Title
+plt.title('a)', loc='left', fontweight='bold')
+
+# Save the image in memory in JPG format
+figName = 'yVelatInterfaceZAxis1.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
+# =============================================================================
+# Y-Velocity at Interface versus z/H 2
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln5 = ax.plot(data['UMean']['x066']['p00']['z']['v']/U,
+              data['UMean']['x066']['p00']['z']['z/H'],
+              '-', label='Case 5', lw=2, ms=6)
+ln6 = ax.plot(data['UMean']['x067']['p00']['z']['v']/U,
+              data['UMean']['x067']['p00']['z']['z/H'],
+              '--', label='Case 6', lw=2, ms=6)
+ln7 = ax.plot(data['UMean']['x115']['p00']['z']['v']/U,
+              data['UMean']['x115']['p00']['z']['z/H'],
+              '-.', label='Case 7', lw=2, ms=6)
+ln8 = ax.plot(data['UMean']['x116']['p00']['z']['v']/U,
+              data['UMean']['x116']['p00']['z']['z/H'],
+              ':', label='Case 8', lw=2, ms=6)
+ln9 = ax.plot(data['UMean']['x117']['p00']['z']['v']/U,
+              data['UMean']['x117']['p00']['z']['z/H'],
+              '-.', label='Case 9', lw=2, ms=6)
+ln10 = ax.plot(data['UMean']['x115']['p00']['z']['v']/U,
+              data['UMean']['x115']['p00']['z']['z/H'],
+              '--', label='Case 10', lw=2, ms=6)
+    
+# Primary Axis
+ax.set_xlabel('v/U',fontsize='x-large')
+ax.set_ylabel('z/H',fontsize='x-large')
+
+plt.autoscale(enable=True)
+plt.grid()
+
+# Legend
+lns = ln5+ln6+ln7+ln8+ln9+ln10
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs, loc=7)
+
+# Title
+plt.title('b)', loc='left', fontweight='bold')
+
+# Save the image in memory in JPG format
+figName = 'yVelatInterfaceZAxis2.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
+# =============================================================================
+# Y-Velocity at Interface versus (x-x0)/L Unique
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln0 = ax.plot(data['UMean']['x068']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x068']['p00']['x']['v']/U,
+              '-', label='Case 0', lw=2, ms=6)
+ln1 = ax.plot(data['UMean']['x062']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x062']['p00']['x']['v']/U,
+              '--', label='Case 1', lw=2, ms=6)
+ln2 = ax.plot(data['UMean']['x063']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x063']['p00']['x']['v']/U,
+              '-.', label='Case 2', lw=2, ms=6)
+ln3 = ax.plot(data['UMean']['x064']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x064']['p00']['x']['v']/U,
+              ':', label='Case 3', lw=2, ms=6)
+ln4 = ax.plot(data['UMean']['x065']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x065']['p00']['x']['v']/U,
+              '-.', label='Case 4', lw=2, ms=6)
+ln5 = ax.plot(data['UMean']['x066']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x066']['p00']['x']['v']/U,
+              '--', label='Case 5', lw=2, ms=6)
+ln6 = ax.plot(data['UMean']['x067']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x067']['p00']['x']['v']/U,
+              '--', label='Case 6', lw=2, ms=6)
+ln7 = ax.plot(data['UMean']['x115']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x115']['p00']['x']['v']/U,
+              '-.', label='Case 7', lw=2, ms=6)
+ln8 = ax.plot(data['UMean']['x116']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x116']['p00']['x']['v']/U,
+              ':', label='Case 8', lw=2, ms=6)
+ln9 = ax.plot(data['UMean']['x117']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x117']['p00']['x']['v']/U,
+              '-.', label='Case 9', lw=2, ms=6)
+ln10 = ax.plot(data['UMean']['x115']['p00']['x']['(x-x0)/L'],
+               data['UMean']['x115']['p00']['x']['v']/U,
+              '--', label='Case 10', lw=2, ms=6)
+
+# Primary Axis
+ax.set_xlabel('(x-x0)/L',fontsize='x-large')
+ax.set_ylabel('v/U',fontsize='x-large')
+
+plt.autoscale(enable=True)
+plt.grid()
+
+# Legend
+lns = ln0+ln1+ln2+ln3+ln4+ln5+ln6+ln7+ln8+ln9+ln10
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs)
+
+# Save the image in memory in JPG format
+figName = 'yVelatInterfaceXAxis.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
+# =============================================================================
+# Y-Velocity at Interface versus (x-x0)/L 1
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln0 = ax.plot(data['UMean']['x068']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x068']['p00']['x']['v']/U,
+              '-', label='Case 0', lw=2, ms=6)
+ln1 = ax.plot(data['UMean']['x062']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x062']['p00']['x']['v']/U,
+              '--', label='Case 1', lw=2, ms=6)
+ln2 = ax.plot(data['UMean']['x063']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x063']['p00']['x']['v']/U,
+              '-.', label='Case 2', lw=2, ms=6)
+ln3 = ax.plot(data['UMean']['x064']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x064']['p00']['x']['v']/U,
+              ':', label='Case 3', lw=2, ms=6)
+ln4 = ax.plot(data['UMean']['x065']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x065']['p00']['x']['v']/U,
+              '-.', label='Case 4', lw=2, ms=6)
+ln5 = ax.plot(data['UMean']['x066']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x066']['p00']['x']['v']/U,
+              '--', label='Case 5', lw=2, ms=6)
+    
+# Primary Axis
+ax.set_xlabel('(x-x0)/L',fontsize='x-large')
+ax.set_ylabel('v/U',fontsize='x-large')
+
+plt.autoscale(enable=True)
+plt.grid()
+
+# Legend
+lns = ln0+ln1+ln2+ln3+ln4+ln5
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs)
+
+# Title
+plt.title('a)', loc='left', fontweight='bold')
+
+# Save the image in memory in JPG format
+figName = 'yVelatInterfaceXAxis1.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
+# =============================================================================
+# Y-Velocity at Interface versus (x-x0)/L 2
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln5 = ax.plot(data['UMean']['x066']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x066']['p00']['x']['v']/U,
+              '-', label='Case 5', lw=2, ms=6)
+ln6 = ax.plot(data['UMean']['x067']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x067']['p00']['x']['v']/U,
+              '--', label='Case 6', lw=2, ms=6)
+ln7 = ax.plot(data['UMean']['x115']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x115']['p00']['x']['v']/U,
+              '-.', label='Case 7', lw=2, ms=6)
+ln8 = ax.plot(data['UMean']['x116']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x116']['p00']['x']['v']/U,
+              ':', label='Case 8', lw=2, ms=6)
+ln9 = ax.plot(data['UMean']['x117']['p00']['x']['(x-x0)/L'],
+              data['UMean']['x117']['p00']['x']['v']/U,
+              '-.', label='Case 9', lw=2, ms=6)
+ln10 = ax.plot(data['UMean']['x115']['p00']['x']['(x-x0)/L'],
+               data['UMean']['x115']['p00']['x']['v']/U,
+              '--', label='Case 10', lw=2, ms=6)
+    
+# Primary Axis
+ax.set_xlabel('(x-x0)/L',fontsize='x-large')
+ax.set_ylabel('v/U',fontsize='x-large')
+
+plt.autoscale(enable=True)
+plt.grid()
+
+# Legend
+lns = ln5+ln6+ln7+ln8+ln9+ln10
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs)
+
+# Title
+plt.title('b)', loc='left', fontweight='bold')
+
+# Save the image in memory in JPG format
+figName = 'yVelatInterfaceXAxis2.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
+# =============================================================================
+# Internal thickness versus (x-x0)/L
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln0 = ax.plot(thickness['x068']['(x-x0)/L'],
+              thickness['x068']['internalThickness']/W,
+              '-', label='Case 0', lw=2, ms=6)
+ln1 = ax.plot(thickness['x062']['(x-x0)/L'],
+              thickness['x062']['internalThickness']/W,
+              '--', label='Case 1', lw=2, ms=6)
+ln2 = ax.plot(thickness['x063']['(x-x0)/L'],
+              thickness['x063']['internalThickness']/W,
+              '-.', label='Case 2', lw=2, ms=6)
+ln3 = ax.plot(thickness['x064']['(x-x0)/L'],
+              thickness['x064']['internalThickness']/W,
+              ':', label='Case 3', lw=2, ms=6)
+ln4 = ax.plot(thickness['x065']['(x-x0)/L'],
+              thickness['x065']['internalThickness']/W,
+              '-.', label='Case 4', lw=2, ms=6)
+ln5 = ax.plot(thickness['x066']['(x-x0)/L'],
+              thickness['x066']['internalThickness']/W,
+              '--', label='Case 5', lw=2, ms=6)
+ln6 = ax.plot(thickness['x067']['(x-x0)/L'],
+              thickness['x067']['internalThickness']/W,
+              '--', label='Case 6', lw=2, ms=6)
+ln7 = ax.plot(thickness['x115']['(x-x0)/L'],
+              thickness['x115']['internalThickness']/W,
+              '-.', label='Case 7', lw=2, ms=6)
+ln8 = ax.plot(thickness['x116']['(x-x0)/L'],
+              thickness['x116']['internalThickness']/W,
+              ':', label='Case 8', lw=2, ms=6)
+ln9 = ax.plot(thickness['x117']['(x-x0)/L'],
+              thickness['x117']['internalThickness']/W,
+              '-.', label='Case 9', lw=2, ms=6)
+ln10 = ax.plot(thickness['x115']['(x-x0)/L'],
+               thickness['x115']['internalThickness']/W,
+              '--', label='Case 10', lw=2, ms=6)
+    
+# Primary Axis
+ax.set_xlabel('(x-x0)/L',fontsize='x-large')
+ax.set_ylabel(r'$\delta_{in}$/U',fontsize='x-large')
+
+plt.autoscale(enable=True)
+plt.grid()
+
+# Legend
+lns = ln0+ln1+ln2+ln3+ln4+ln5+ln6+ln7+ln8+ln9+ln10
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs)
+
+# Save the image in memory in JPG format
+figName = 'internalThickness.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
+# =============================================================================
+# External thickness versus (x-x0)/L
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln0 = ax.plot(thickness['x068']['(x-x0)/L'],
+              thickness['x068']['externalThickness']/W,
+              '-', label='Case 0', lw=2, ms=6)
+ln1 = ax.plot(thickness['x062']['(x-x0)/L'],
+              thickness['x062']['externalThickness']/W,
+              '--', label='Case 1', lw=2, ms=6)
+ln2 = ax.plot(thickness['x063']['(x-x0)/L'],
+              thickness['x063']['externalThickness']/W,
+              '-.', label='Case 2', lw=2, ms=6)
+ln3 = ax.plot(thickness['x064']['(x-x0)/L'],
+              thickness['x064']['externalThickness']/W,
+              ':', label='Case 3', lw=2, ms=6)
+ln4 = ax.plot(thickness['x065']['(x-x0)/L'],
+              thickness['x065']['externalThickness']/W,
+              '-.', label='Case 4', lw=2, ms=6)
+ln5 = ax.plot(thickness['x066']['(x-x0)/L'],
+              thickness['x066']['externalThickness']/W,
+              '--', label='Case 5', lw=2, ms=6)
+ln6 = ax.plot(thickness['x067']['(x-x0)/L'],
+              thickness['x067']['externalThickness']/W,
+              '--', label='Case 6', lw=2, ms=6)
+ln7 = ax.plot(thickness['x115']['(x-x0)/L'],
+              thickness['x115']['externalThickness']/W,
+              '-.', label='Case 7', lw=2, ms=6)
+ln8 = ax.plot(thickness['x116']['(x-x0)/L'],
+              thickness['x116']['externalThickness']/W,
+              ':', label='Case 8', lw=2, ms=6)
+ln9 = ax.plot(thickness['x117']['(x-x0)/L'],
+              thickness['x117']['externalThickness']/W,
+              '-.', label='Case 9', lw=2, ms=6)
+ln10 = ax.plot(thickness['x115']['(x-x0)/L'],
+               thickness['x115']['externalThickness']/W,
+              '--', label='Case 10', lw=2, ms=6)
+    
+# Primary Axis
+ax.set_xlabel('(x-x0)/L',fontsize='x-large')
+ax.set_ylabel(r'$\delta_{out}$/U',fontsize='x-large')
+
+plt.autoscale(enable=True)
+plt.grid()
+
+# Legend
+lns = ln0+ln1+ln2+ln3+ln4+ln5+ln6+ln7+ln8+ln9+ln10
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs)
+
+# Save the image in memory in JPG format
+figName = 'externalThickness.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
+# =============================================================================
+# Total thickness versus (x-x0)/L
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln0 = ax.plot(thickness['x068']['(x-x0)/L'],
+              thickness['x068']['totalThickness']/W,
+              '-', label='Case 0', lw=2, ms=6)
+ln1 = ax.plot(thickness['x062']['(x-x0)/L'],
+              thickness['x062']['totalThickness']/W,
+              '--', label='Case 1', lw=2, ms=6)
+ln2 = ax.plot(thickness['x063']['(x-x0)/L'],
+              thickness['x063']['totalThickness']/W,
+              '-.', label='Case 2', lw=2, ms=6)
+ln3 = ax.plot(thickness['x064']['(x-x0)/L'],
+              thickness['x064']['totalThickness']/W,
+              ':', label='Case 3', lw=2, ms=6)
+ln4 = ax.plot(thickness['x065']['(x-x0)/L'],
+              thickness['x065']['totalThickness']/W,
+              '-.', label='Case 4', lw=2, ms=6)
+ln5 = ax.plot(thickness['x066']['(x-x0)/L'],
+              thickness['x066']['totalThickness']/W,
+              '--', label='Case 5', lw=2, ms=6)
+ln6 = ax.plot(thickness['x067']['(x-x0)/L'],
+              thickness['x067']['totalThickness']/W,
+              '--', label='Case 6', lw=2, ms=6)
+ln7 = ax.plot(thickness['x115']['(x-x0)/L'],
+              thickness['x115']['totalThickness']/W,
+              '-.', label='Case 7', lw=2, ms=6)
+ln8 = ax.plot(thickness['x116']['(x-x0)/L'],
+              thickness['x116']['totalThickness']/W,
+              ':', label='Case 8', lw=2, ms=6)
+ln9 = ax.plot(thickness['x117']['(x-x0)/L'],
+              thickness['x117']['totalThickness']/W,
+              '-.', label='Case 9', lw=2, ms=6)
+ln10 = ax.plot(thickness['x115']['(x-x0)/L'],
+               thickness['x115']['totalThickness']/W,
+              '--', label='Case 10', lw=2, ms=6)
+    
+# Primary Axis
+ax.set_xlabel('(x-x0)/L',fontsize='x-large')
+ax.set_ylabel(r'$\delta$/U',fontsize='x-large')
+
+plt.autoscale(enable=True)
+plt.grid()
+
+# Legend
+lns = ln0+ln1+ln2+ln3+ln4+ln5+ln6+ln7+ln8+ln9+ln10
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs)
+
+# Save the image in memory in JPG format
+figName = 'totalThickness.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
 \end{lstlisting}

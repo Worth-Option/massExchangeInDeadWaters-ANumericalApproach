@@ -99,7 +99,7 @@ In which $s/d$ is the spacing: diameter ratio between the wires.
 \subsection{Simulation Setup}
 The numerical model was developed based on the physical experiments of \textcite{xiang2019}. The 3D geometry consisted of a single lateral cavity that was adjacent to a rectangular open channel Figure (\ref{fig:art4:domain}). The lateral cavity was $W=0.15$ m wide and $L = 0.25$ m long, resulting in the aspect ratio $W/L=0.60$, which falls in the range of $0.5\leq W/L\leq 0.15$ and thus corresponds to a one-gyre circulation system to be formed inside the cavity \textcite{Uijttewaal2001}. The depth of the channel and cavity was $H=0.10$ m. The flow in the main channel was turbulent ($Re=9000$) and subcritical ($Fr=0.102$), with bulk velocity $U = 0.101$ m/s at the channel inlet ($x=0$ m). The temperature was constant at $T=293K$.
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/domain.png}
 \caption{Computational domain with coordinates and dimensions.}
@@ -139,7 +139,7 @@ The study of the vegetated cavity was proposed by varying the vegetation density
 \subsection{LES Quality and Grid Independence}
 The quality of the numerical solution was evaluated using a procedure based on three different grids \cite{Dutta2018}. The refinement rate between the grids was 1.80, although with the same configurations (numerical model and boundary conditions). The numerical and modelling errors were estimated and compared to the experimental data from \textcite{xiang2019}. Figure \ref{fig:art4:validation} shows the ensemble-averaged streamwise velocity with the total error (numerical and modelled) expressed by error bars. Overall, the numerical solution presented low error magnitudes, with a mean total error of –0.0024 m/s. The errors could be mitigated by a further refinement, although the errors were small enough to continue the experiments.
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/validation.jpeg}
 \caption{Grid and Numerical Errors of the ensemble-averaged streamwise velocity in the cavity at $z=0.6H$, where $U$ is the bulk velocity in the main channel, $y_0=0.30$m represents the beginning of the cavity and $H$ is the height of the flow.}
@@ -149,26 +149,26 @@ The quality of the numerical solution was evaluated using a procedure based on t
 Figure \ref{fig:art4:validation} compares the results of the time-averaged streamwise velocity \textit{u} at $z/H=0.6$ obtained from the second case ($a=0.1332$\%) of \textcite{xiang2019}, using both experimental and his numerical model. The numerical results, from the present paper, showed good consistency with the experimental data. A difference between the wall resolved LES (WRLES) and the wall modelled LES (WMLES) is highlighted in the region $(y-y_0)/H > 1.20$, where the continuous line deviated from the dashed result. Although, in all other regions the results followed closely both experimental and the WRLES.
 
 \section{Flow Characteristics}
-Figure \ref{fig:art4:velocityContour} show the mean 2D streamlines for all the cases at $z/H=0.6$. Under the cases 0 to 5 a main anti-clockwise motion takes place (Figure \ref{fig:art4:velocityContour}  a-f). The increase in vegetation density translates the centre of the gyre towards the main channel and downstream in the x-direction as the blockage effects increase and the flow loses energy faster. For $a=1.3320$\% (case 5) the main circulation starts to lose its shape and this process continues up to $a=3.9960$\% when the flow stabilised (Figure \ref{fig:art4:velocityContour}  f and Figure \ref{fig:art4:velocityContour}  g-h). The case 8 showed the formation of a secondary gyre system at the right portion of the cavity, $0.45<x/L<1$ and $0<y/W<1$ (Figure \ref{fig:art4:velocityContour}  i). This behaviour was shifted to the left as the vegetation increased to $a=7.9920$\% (Case 9), $0.30<x/L<1$ and $0<y/W<1$ (Figure \ref{fig:art4:velocityContour}  i). The presence of secondary circulations normally occurs at different aspect ratios: $W/L<0.5$ and $W/L>1.5$ \cite{Sukhodolov2002}, this circulation naturally does not have any contact with the main channel as they are derived from the primary circulation. Figure \ref{fig:art4:velocityContour}  i-k show the primary circulation at the bottom left of the cavity and the secondary gyre occupying approximately 50\% of the area in $a=5.3280$\%, the area comprehending the secondary gyre further increased with the vegetation drag increase.
+Figure \ref{fig:art4:velocityContour} show the mean 2D streamlines for all the cases at $z/H=0.6$ inside the cavity volume as the principal phenomena occurs in this region. Under the cases 0 to 5 a main anti-clockwise motion takes place (Figure \ref{fig:art4:velocityContour}  a-f). The increase in vegetation density translates the centre of the gyre towards the main channel and downstream in the x-direction as the blockage effects increase and the flow loses energy faster. For $a=1.3320$\% (case 5) the main circulation starts to lose its shape and this process continues up to $a=3.9960$\% when the flow stabilised (Figure \ref{fig:art4:velocityContour}  f and Figure \ref{fig:art4:velocityContour}  g-h). The case 8 showed the formation of a secondary gyre system at the right portion of the cavity, $0.45<x/L<1$ and $0<y/W<1$ (Figure \ref{fig:art4:velocityContour}  i). This behaviour was shifted to the left as the vegetation increased to $a=7.9920$\% (Case 9), $0.30<x/L<1$ and $0<y/W<1$ (Figure \ref{fig:art4:velocityContour}  i). The presence of secondary circulations normally occurs at different aspect ratios: $W/L<0.5$ and $W/L>1.5$ \cite{Sukhodolov2002}, this circulation naturally does not have any contact with the main channel as they are derived from the primary circulation. Figure \ref{fig:art4:velocityContour}  i-k show the primary circulation at the bottom left of the cavity and the secondary gyre occupying approximately 50\% of the area in $a=5.3280$\%, the area comprehending the secondary gyre further increased with the vegetation drag increase.
 
 Figure \ref{fig:art4:velXYPlane} show the flow at the horizontal plane \textit{XY} at $z/H = 0.6$ along the \textit{y}-axis, $(y-y_0)/H$ being $y_0=0.30$m the beginning of the cavity, where the velocity decreases as the vegetation density increases. Another important aspect of this figure is the positioning of the circulation centre that slowly shifts towards the region close to the interface ( $(y-y_0)/H=0$) that is associated with the flow resistance imposed by the vegetation.
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/velocityContour.jpg}
-\caption{Mean 2D streamlines of different vegetation densities at the horizontal plane $z/H = 0.6$: a) Case 0, b) Case 1, c) Case 2, d) Case 3, e) Case 4, f) Case 5, g) Case 6, h) Case 7, i) Case 8, j) Case 9 and k) Case 10.}
+\caption{Mean 2D streamlines of different vegetation densities at the horizontal plane $z/H = 0.6$ inside the cavity volume: a) Case 0, b) Case 1, c) Case 2, d) Case 3, e) Case 4, f) Case 5, g) Case 6, h) Case 7, i) Case 8, j) Case 9 and k) Case 10.}
 \label{fig:art4:velocityContour}
 \end{figure}
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/velXYPlane.jpg}
-\caption{The variation of the streamwise velocity at the horizontal plane $z/H = 0.6$.}
+\caption{The variation of the streamwise velocity at the horizontal plane $z/H = 0.6$ inside the cavity volume.}
 \label{fig:art4:velXYPlane}
 \end{figure}
 The flow through the interface was initially directed toward the cavity ($z/H < 0.1$); positive velocity; then it was outwards ($0.1 < z/H < 0.9$); negative velocity; and lastly entering the domain ($z/H > 0.9$) (Figure \ref{fig:art4:yVelatInterfaceZAxis}). Through the variation in density, this behaviour did not change as the location of the phases did not change through all the cases, as seen in Figure \ref{fig:art4:yVelatInterfaceZAxis}, although the peak velocities at each phase gradually decreased as the vegetation density increased, which is attributable to the energy dissipation caused by vegetation. As the velocity values decreased the second phase ($0.1 < z/H < 0.9$) tended to flat as the vegetation was tending to a solid block behaviour similar to the behaviour of vegetation in \cite{chen2012}. Furthermore, the initial peak in velocity disappeared for $a > 5.32$\% (Case 8) and was substituted by the increase of the third phase.
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/yVelatInterfaceZAxis.jpg}
 \caption{The variation of the transversal velocity in the interface between the cavity and the main channel along the z-axis: a) Cases from 0 to 5; b) Cases from 5 to 10. Positive values of $v/U$ indicate the flow entering the cavity volume.}
@@ -177,7 +177,7 @@ The flow through the interface was initially directed toward the cavity ($z/H < 
 
 Figure \ref{fig:art4:yVelatInterfaceXAxis} shows the behaviour of the interface along the \textit{x}-axis. Analogous to the \textit{z}-axis, the increase in vegetation density altered the velocity zones. When the vegetation was not present, Case 0, the profile initially was set to the main channel up to 50 \% of the interface length similar to the behaviour of the series of groynes in \textcite{weitbrecht2004}. Although, with the increase of vegetation this first negative zone became positive and the only region where water exited the DZ volume was tending to $(x-x0)/L > 0.8$, due to the shock of the vortices to the downstream wall of the cavity.
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/yVelatInterfaceXAxis.jpg}
 \caption{The variation of the transversal velocity in the interface between the cavity and the main channel along the x-axis. Positive values of $v/U$ indicate the flow entering the cavity volume.}
@@ -196,13 +196,13 @@ where, $U_i$, $U_c$ and $U_m$ (m/s) are the time-averaged streamwise velocities 
 
 Figure \ref{fig:art4:thickness} show the evolution of the thickness layer in the streamwise direction for all the cases. Overall, the mixing layer increased when $(x-x_0)/L<0.80$ and decreased when $(x-x_0)/L>0.80$ as the velocity gradient increased in the contact with the wall. Similar to \textcite{xiang2020}, the vegetation density increase affected the width of the mixing layer, for both inner and outer sections. The increasing blockage limited the entrance of flow in the cavity (Figures \ref{fig:art4:velocityContour} and \ref{fig:art4:velXYPlane}), thus it limits the growth of the mixing layer. The wall behaviour of the cavity started to take place in case 8 and 9, although the presence of the secondary gyre in case 10 increased the thickness.
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/thickness.jpeg}
 \caption{Evolution of the mixing layer thickness averaged at the z-axis: a) inner mixing layer; b) outer mixing layer and c) total mixing layer.}
 \label{fig:art4:thickness}
 \end{figure}
-
+\FloatBarrier
 \subsection{Vorticity}
 Figures \ref{fig:art4:vorticityMean1} and \ref{fig:art4:vorticityMean2} show the time-averaged vorticity magnitude (normalised by U/H) at . The vorticity magnitude $\Omega$ ($s^{-1}$) is defined as:
 
@@ -217,20 +217,20 @@ For all cases, the vorticity remained high through all the interface between the
 
 The increase of vegetation density gradually decreased the levels of vorticity inside the cavity volume up to $a<7.9920$, when there was no more vorticity in the volume. Although, it seems that vegetation increased the vorticity at the inner part of the mixing layer despite the blockage effect.
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/vorticityMean1.jpeg}
 \caption{Time averaged vorticity at z/H = 0.6: a) Case 0, b) Case 1, c) Case 2, d) Case 3, e) Case 4 and f) Case 5.}
 \label{fig:art4:vorticityMean1}
 \end{figure}
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/vorticityMean2.jpeg}
 \caption{Time averaged vorticity at z/H = 0.6: a) Case 6, b) Case 7, c) Case 8, d) Case 9 and e) Case 10.}
 \label{fig:art4:vorticityMean2}
 \end{figure}
-
+\FloatBarrier
 \subsection{Turbulent Kinetic Energy (TKE)}
 The turbulent kinetic energy (TKE) in a LES simulation is defined as:
 \begin{equation}
@@ -244,20 +244,20 @@ A time-averaged TKE distribution, normalised by $U^2$, is presented in Figures \
 
 As the vegetation density increased, the turbulent kinetic energy inside the cavity decreased, similarly to \textcite{xiang2019}, although in a much faster rate than the vorticity. The blockage effect due to the vegetation density increase slowly reduces the TKE values inside the cavity. The last region in which $TKE > 0$ is the downstream wall of the cavity, region where the first jet enters the volume. Similar to \textcite{xiang2019}, the first levels of vegetation registered an increase of TKE at the interface. Although with the increase of vegetation beyond $a > 0.33$\% (Figure \ref{fig:art4:totalTKEMean1} d), the turbulence intensity was lower than the non vegetated scenario which can be attributed to the shrink of the inner part of the mixing layer (Figure \ref{fig:art4:thickness} a) caused by the flow turbulence inhibition caused by high-density vegetation \cite{Nepf2012}. Furthermore, the shape of the TKE distribution on the outer part of the mixing layer changed with the increase of vegetation, on $a = 0$\% the region that the distribution width increases is up to approximately $(x-x0)/L < 0.8$, when the jet entrance to the volume decreases its width. For the vegetated cases, specially Case 3, the vegetation blocks part of the jet that normally enters the downstream portion of the volume, this causes the TKE distribution to take a triangular shape which indicates an increased turbulence intensity in the main channel up to $a < 5.328$ \%.
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/totalTKEMean1.jpeg}
 \caption{Time-averaged total kinetic energy (TKE) at z/h = 0.6: a) Case 0, b) Case 1, c) Case 2, d) Case 3, e) Case 4 and f) Case 5.}
 \label{fig:art4:totalTKEMean1}
 \end{figure}
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/totalTKEMean2.jpeg}
 \caption{Time-averaged total kinetic energy (TKE) at z/h = 0.6: a) Case 6, b) Case 7, c) Case 8, d) Case 9 and e) Case 10.}
 \label{fig:art4:totalTKEMean2}
 \end{figure}
-
+\FloatBarrier
 \section{Mass Exchange}
 The mass exchange coefficient $k$ is an important parameter of the cavity, as one of its main characteristics is the transient storage of mass. This coefficient indicates the mass exchange rate between the cavity and the main channel. The evaluation of this parameter through tracer experiments was done using a first-order exponential decay in which the initial concentration was set to 1. Analogously, the mean retention time ($T_{cav}$) is the time needed to completely replace the water volume in the cavity. This parameter was adjusted using a non-linear least square method to best approximate the value of $T_{cav}$ to the volumetric-average tracer concentration through time \cite{weitbrecht2004} (Figure \ref{fig:art4:massConcentration}).
 
@@ -273,7 +273,7 @@ k=\frac{W}{T_{cav} U}
 
 where, $C_0=1$ is the initial concentration, $t$ (s) is the time and $T_{cav}$ (s) is the mean retention time and $k$ is the mass exchange coefficient.
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/massDecay.jpeg}
 \caption{Volumetric-averaged tracer concentration decay inside the lateral cavity over time: a) Case 1 b) Case 8.}
@@ -282,7 +282,7 @@ where, $C_0=1$ is the initial concentration, $t$ (s) is the time and $T_{cav}$ (
 
 Figure \ref{fig:art4:massExchange} shows the variation of the mass exchange coefficient and the mean retention time with the increase of vegetation density $a$. Analogous to \textcite{xiang2019}, the tracer fields indicated a deviation in the curve near $a \approx 0.33$ which is related first to the plant-induced Karman vortex street and Kelvin-Helmholtz eddies \cite{Nepf2012} which decreased the $k$ decay rate and second the vegetation blockage that becomes the main effect further that point. Further that point, the mass exchange coefficient decreases with the increase of vegetation density in two different phases divided at $a \approx 4$\%. It is possible to assume that this vegetation density acted as a wall as the flow cannot penetrate the cavity enough for the flow to occur, the remaining exchange occurred in a thin layer that further reduced its width as the density increased. The presence of the secondary circulation for $a \geq 5.3280$\% (Case 8) implied that a further increase in vegetation density could divide the secondary phase into a two slope section of the curve, where the first circulation ejects mass faster than the secondary with slower velocities and no contact with the main channel \cite{deOliveira2020} (Figure \ref{fig:art4:massConcentration} a and b).
 
-\begin{figure}[!ht]
+\begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{../images/art4/massExchange.jpg}
 \caption{The variation of the mass exchange coefficient and the mean retention time with the increase of vegetation density.}
@@ -290,6 +290,15 @@ Figure \ref{fig:art4:massExchange} shows the variation of the mass exchange coef
 \end{figure}
 
 For low-vegetation density ($a < 4$\%), $k$ drops off quickly with increasing vegetation density $a$. For high-vegetation density ($a \geq 4$\%), $k$ is small, but not zero, and decreases slowly with increasing $a$. As the vegetation drag becomes the dominant effect, the velocity within the cavity becomes negligibly small, and it behaves as if the cavity is fully blocked ($\phi = 1$). The mass exchange, then, occurs mainly near the interface volume, this could be an influence of the increase of TKE in the outer part of the mixing layer. The effect of higher TKE levels in the outer mixing layer provides clear water volumes to scratch the vegetation at the interface. As the width of the TKE distribution decreases after a maximum at $a = 5.3380$ \%, the diminishing rate that clear water is available at the interface further slows down the exchange between the zones. Furthermore, the presence of vorticity for $a \leq 7.9920$ indicates that the small vortices could be moving tracer and promoting its diffusion particularly at the inner mixing layer. This behaviour contributed to the mass exchange and the lack of this phenomenon can be seen past $a \geq 7.9920$ when the mass exchange seems to change the asymptote of $k$ decay.
+
+\section{Discussion}
+From a hydrodynamic perspective, the flow the vegetation drag slowly reduces the energy of the flow, be it inside the cavity or at the mixing layer. As the first jet-like flow collides with the downstream wall, the motion inside the cavity assumes a swirly pattern in which the vegetation slowly damps the energy impacting the magnitude of velocities inside the volume \cite{sukhodolov2017}. From our results, it is clear to assume that this behaviour occurs as the velocity field did not only loss in magnitude but also shape as the density increased what demonstrates the correlation of vegetation density and the flow field in a lateral cavity. Furthermore, this process of reduction of velocity could promote sediment deposition, enhanced by the results of the turbulence fields that showed how the mixing inside the cavity slowly ceases. From a biological standpoint, the increase of vegetation could influence the spread of biota in streams promoting restoration along its path (e.g. fish breeding or crustacea habitat). The slow circulation allied with the deposition of sediments on its zone could further increase lateral heterogeneity which creates different environments and could be associated with a diversification of species in the implanted region. These deposed sediments can also represent a biological problem, as the cavity volume can become a source of pollutants once the system goes submerged \cite{weitbrecht2004}. Although, the presence of vegetation could improve water quality as the increased residence time could be long enough for plants to absorb these nutrients.
+
+It is important, then, to assume levels in which the vegetation can favour different processes (e.g. vegetation growth or sediment catch). It seems that $a = 0.6660$ \% (Case 4) is an import point as it represents a change in the format of the mixing layer length and also on the vorticity and TKE inside the cavity. As this after this value these variables or get smaller or cease to exist inside the volume it could be argued that this point represents a limit for the sparse vegetation. Another important metric for a threshold is the changes in mass exchange, from Figure 13, as this value of a represents the beginning of a faster decay in the mass exchange rate leading to a curve similar to the velocity in \textcite{chen2012}.
+
+Following the same logic, the point $a = 3.9960$ \% (Case 7) can also be considered a milestone as this represents another inflexion in the mass exchange curve. From another perspective, this density represents the end of TKE inside the volume further reducing the mixing and thus the mass exchange. Furthermore, the mischaracterisation of the velocity fields beyond this density allowed the flow to assume another circulation pattern that would not be expected in a non-vegetated case.
+
+Thus, we suggest a classification of the flow and its related mass exchange in a vegetated lateral cavity in three phases: 1) sparse ($a<0.6660$ \%), medium ($0.6660<a(\%)<3.996$) and dense ($a>3.9960$ \%). In the sparse region, it is expected that the increased rate of mass exchange, compared to a non-vegetated case, might promote the settlement of particles evenly as it can be seen in Figure \ref{fig:art4:velocityContour} a-d. This spread of particles could potentially promote  uniform growth of vegetation while preserving the exchange with the main channel. Thus, making it an appropriate class for reducing the impact of pollutant spread in a reduced time (e.g. oil spill or first flush rain). The medium density class seems to be the best benefit for mass storage and mitigation of riverbank erosion. Although, one must have in mind that the reduced mass exchange rate might impact the catchment of a sporadic pollutant release, that being said we recommend this class for long term catchments (e.g. illegal sewage release). Lastly, the high-density class seems to be the most effective in mitigating the riverbank erosion, especially at the lower right corner of the lateral cavity ($x/L=1$ and $(y-y0)/H=0$) as the blockage effect does not allow the impact of a jet at the wall of the cavity.
 
 \section{Conclusion}
 The hydrodynamics of a single lateral cavity with different vegetation densities was investigated numerically through LES. The results reveal that the single circulation system (non vegetated case) can be transformed into a two-gyre system with the increase of vegetation density. The influence of this secondary gyre decreased the rate in which the mass exchange coefficient diminished.

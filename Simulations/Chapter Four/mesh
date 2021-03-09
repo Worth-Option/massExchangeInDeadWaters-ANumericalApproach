@@ -1,0 +1,20 @@
+#!/bin/sh
+
+case=${PWD##*/}
+init=/mnt/Simulations/OPENFOAM/Solved/Xiang/xI009
+rm -rf log p* 0 constant/boundaryData
+mkdir log constant/boundaryData
+mkdir constant/boundaryData/inlet
+mkdir constant/boundaryData/inlet/0
+cp -r 0.orig 0
+blockMesh 2>&1 | tee log/blockMesh.log
+topoSet 2>&1 | tee log/topoSet.log
+checkMesh -allGeometry -allTopology -writeAllFields -writeSets vtk 2>&1 | tee log/checkMesh.log
+rm -rf dynamicCode
+cd ..
+cp $init/postProcessing/sampleDict/outlet/points $case/constant/boundaryData/inlet
+cp $init/postProcessing/sampleDict/outlet/15000/* $case/constant/boundaryData/inlet/0
+cd $case
+setFields 2>&1 | tee log/setFields.log
+
+echo -e "\nMesh constructed and checked...\n"

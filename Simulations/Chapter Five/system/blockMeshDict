@@ -1,0 +1,227 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    location system;
+    object blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+    // Geometry Parameters
+    inletX			0.25;
+    channelY		0.30;
+    embX			#calc "$inletX + 0.25";
+    embY			#calc "$channelY + 0.15";
+    outletX			#calc "2*$embX + $inletX";
+    depth			0.1;
+    
+    // Mesh Parameters
+    z				40;
+    embx			80;
+    emby			80;
+    
+    ioX				40;
+    outX			120;
+    ioY				120;
+
+	gradingX		1;
+	gradingXinv		1;
+	gradingY		2;
+	gradingYinv		0.5;
+	
+	embGradingY		2;
+	embGradingYinv	0.5;
+	
+	gradingZ		41;
+
+    scale 1;
+    vertices  
+    (
+      // Bottom Vertices
+      (0.00 0.00 0.000)						//0
+      ($inletX 0.00 0.000)					//1
+      ($embX 0.00 0.000)					//2
+      ($outletX 0.00 0.000)					//3
+      ($outletX $channelY 0.000)			//4
+      ($embX $channelY 0.000)				//5
+      ($inletX $channelY 0.000)				//6
+      (0.00 $channelY 0.000)				//7
+      ($embX $embY 0.000)					//8
+      ($inletX $embY 0.000)					//9
+		
+      // Upper Vertices	
+      (0.00 0.00 $depth)					//10
+      ($inletX 0.00 $depth)					//11
+      ($embX 0.00 $depth)					//12
+      ($outletX 0.00 $depth)				//13
+      ($outletX $channelY $depth)			//14
+      ($embX $channelY $depth)				//15
+      ($inletX $channelY $depth)			//16
+      (0.00 $channelY $depth)				//17
+      ($embX $embY $depth)					//18
+      ($inletX $embY $depth)				//19
+    );
+
+    blocks  
+    ( 	
+		hex
+		( 6 5 8 9 16 15 18 19)
+		embayment
+		( $embx $emby $z)
+		simpleGrading
+		(
+			(
+				(0.1 0.2 $embGradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $embGradingYinv)
+			)
+			(
+				(0.1 0.2 $embGradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $embGradingYinv)
+			)
+			$gradingZ
+		)
+		
+		hex
+		( 0 1 6 7 10 11 16 17)
+		inlet_channel
+		( $ioX $ioY $z)
+		simpleGrading
+		(
+			1
+			//(
+			//	(0.25 0.3 $gradingX)
+			//	(0.50 0.4 1)
+			//	(0.25 0.3 $gradingXinv)
+			//)
+			(
+				(0.1 0.2 $gradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $gradingYinv)
+			)
+			$gradingZ
+		)
+
+		
+	
+		hex
+		( 1 2 5 6 11 12 15 16)
+		middle_channel
+		( $embx $ioY $z)
+		simpleGrading
+		(
+			(
+				(0.1 0.2 $embGradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $embGradingYinv)
+			)
+			(
+				(0.1 0.2 $gradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $gradingYinv)
+			)
+			$gradingZ
+		)
+		
+		hex
+		( 2 3 4 5 12 13 14 15)
+		outlet_channel
+		( $outX $ioY $z)
+		simpleGrading
+		(
+			1
+			//(
+			//	(0.25 0.3 $gradingX)
+			//	(0.50 0.4 1)
+			//	(0.25 0.3 $gradingXinv)
+			//)
+			(
+				(0.1 0.2 $gradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $gradingYinv)
+			)
+			$gradingZ
+		)
+    );
+
+    edges  
+    (
+    );
+
+    boundary  
+    (
+	inlet
+	{
+		type	patch;
+		faces
+		(
+			( 0 7 17 10)
+		);
+	}
+	outlet
+	{
+		type 	patch;
+		faces
+		(
+			( 3 4 14 13)
+		);
+	}
+	bottom
+	{
+		type 	wall;
+		faces
+		(
+			( 0 1 6 7)
+			( 1 2 5 6)
+			( 2 3 4 5)
+			( 6 5 8 9)
+		);
+	}
+	lateralWall
+	{	
+		type 	wall;
+		faces
+		(
+			( 7 6 16 17)
+			( 6 9 19 16)
+			( 9 8 18 19)
+			( 5 15 18 8)
+			( 5 4 14 15)
+		);
+	}
+	farField
+	{
+		type	wall;
+		faces
+		(
+			( 0 10 11 1)
+			( 1 11 12 2)
+			( 2 12 13 3)
+		);
+	}
+	freeSurface
+	{
+		type 	wall;
+		faces
+		(
+			( 10 11 16 17)
+			( 11 12 15 16)
+			( 12 13 14 15)
+			( 16 15 18 19)
+		);
+	}
+    );
+    mergePatchPairs  
+    (
+    );
+
+// ************************************************************************* //

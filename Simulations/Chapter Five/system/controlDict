@@ -1,0 +1,689 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    location system;
+    object controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+	application				pimpleFoam;
+    startFrom				latestTime;
+    startTime				0;
+    stopAt					endTime;
+    endTime					1000;
+    deltaT					1.0E-3;
+    writeControl			adjustableRunTime;
+    writeInterval			10;
+    purgeWrite				0;
+    writeFormat				ascii;
+    writePrecision			6;
+    writeCompression		yes;
+    timeFormat				general;
+    timePrecision			6;
+    graphFormat				raw;
+    runTimeModifiable		yes;
+    adjustTimeStep			true;
+    maxCo					0.90;
+    maxDeltaT				0.05;
+
+functions
+{
+	turbulenceFields1
+	{
+		type					turbulenceFields;
+		libs					("libfieldFunctionObjects.so");
+		writeControl			writeTime;
+		timeStart       		150;
+		fields					(R nuTilda L k I);
+	}
+	
+	Q1 //second invariant of the velocity gradient tensor
+	{
+		type            		Q;
+		libs            		("libfieldFunctionObjects.so");
+		timeStart       		150;
+		writeControl    		writeTime;
+	}
+
+	yPlus1
+	{
+	    type       				yPlus;
+	    libs       				("libfieldFunctionObjects.so");
+	    timeStart       		150;
+	    writeControl			writeTime;
+	}
+	
+	Co1
+	{
+		type					CourantNo;
+		libs					("libfieldFunctionObjects.so");
+		timeStart       		150;
+		writeControl			writeTime;
+	}
+
+	vorticity1
+	{
+		type        			vorticity;
+		libs        			("libfieldFunctionObjects.so");
+		timeStart       		150;
+		writeControl    		writeTime;
+	}
+	
+	wallShearStress1
+	{
+		type            		wallShearStress;
+		libs            		("libfieldFunctionObjects.so");
+		timeStart       		150;
+		writeControl    		writeTime;
+	
+	}
+	
+	LambVector1	//cross product of a velocity vector [m/s] and vorticity vector [1/s]
+	{
+		type        			lambVector;
+		libs            		("libfieldFunctionObjects.so");
+		libs            		("libfieldFunctionObjects.so");
+		timeStart       		150;
+		writeControl    		writeTime;
+	}
+	
+	//#includeFunc absUy
+	
+	UyExtract
+	{
+		type					components;
+		libs            		(fieldFunctionObjects);
+		field					U;
+		timeStart       		150;
+		writeControl			none;
+	}
+	
+	absUy
+	{
+		type					mag;
+		libs            		(fieldFunctionObjects);
+		field					Uy;
+		result					absUy;
+		timeStart       		150;
+		writeControl			none;
+	}
+	
+	surfaceInterpolate1
+	{
+		type            		surfaceInterpolate;
+		libs            		(fieldFunctionObjects);
+		fields      			((absUy absUySurface));
+		timeStart       		150;
+		writeControl			none;
+	}
+	
+	velocityInterface
+	{
+		type            		surfaceFieldValue;
+		libs            		(fieldFunctionObjects);
+		fields          		(absUySurface);
+		operation       		areaIntegrate;
+		regionType      		faceZone;
+		name            		interface;
+		timeStart       		150;
+		executeControl  		timeStep;
+		executeInterval 		1;
+		writeControl    		timeStep;
+		writeInterval   		1;
+		writeFields     		false;
+	}
+	
+	tracer
+	{
+		type 					scalarTransport;
+		libs					("libsolverFunctionObjects.so");
+		enabled					true;
+		timeStart				150;
+		writeControl			writeTime;
+		log						yes;
+
+		nCorr					1;
+
+		// Turbulent diffusivity;
+		alphaD					0.001;		// Molecular diffusivity
+		alphaDt					1.111;		// Turbulent diffusivity (alphaDt = 1 / Sct)
+		
+		// Bounds the transported scalar within 0 and 1
+		bounded01				true;
+		
+		//name of field
+		field					tracer;
+	}
+	
+	tracerVolAverage
+	{
+		type            		volFieldValue;
+		libs            		("libfieldFunctionObjects.so");
+	
+		log             		true;
+		timeStart				150;
+		writeControl			timeStep;
+		writeInterval			1;
+		writeFields     		true;
+			
+		regionType      		cellZone;
+		name            		porousZone;
+		operation       		volAverage;
+	
+		fields
+		(
+			tracer
+		);
+	}
+	
+	surfaceInterpolateTracer
+	{
+		type            		surfaceInterpolate;
+		libs            		(fieldFunctionObjects);
+		fields      			((tracer tracerSurface));
+		timeStart       		150;
+		writeControl			none;
+	}
+	
+	tracerBottom
+	{
+		type            		surfaceFieldValue;
+		libs            		(fieldFunctionObjects);
+		fields          		(tracerSurface);
+		operation       		average;
+		regionType      		faceZone;
+		name            		interfaceBottom;
+		timeStart       		150;
+		executeControl  		timeStep;
+		executeInterval 		1;
+		writeControl    		timeStep;
+		writeInterval   		1;
+		writeFields     		false;
+	}
+	
+	tracerMiddle
+	{
+		type            		surfaceFieldValue;
+		libs            		(fieldFunctionObjects);
+		fields          		(tracerSurface);
+		operation       		average;
+		regionType      		faceZone;
+		name            		interfaceMiddle;
+		timeStart       		150;
+		executeControl  		timeStep;
+		executeInterval 		1;
+		writeControl    		timeStep;
+		writeInterval   		1;
+		writeFields     		false;
+	}
+	
+	tracerTop
+	{
+		type            		surfaceFieldValue;
+		libs            		(fieldFunctionObjects);
+		fields          		(tracerSurface);
+		operation       		average;
+		regionType      		faceZone;
+		name            		interfaceTop;
+		timeStart       		150;
+		executeControl  		timeStep;
+		executeInterval 		1;
+		writeControl    		timeStep;
+		writeInterval   		1;
+		writeFields     		false;
+	}
+	
+ 	generalVariablesAveraging
+	{
+	    type					fieldAverage;
+	    libs       				("libfieldFunctionObjects.so");
+	    enabled					true;
+	    writeControl			writeTime;
+	    timeStart				150;
+	    restartOnRestart		false;
+	    resetOnOutput			false;
+	        
+	    fields
+	    (
+	        U
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+
+			p
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+               
+            Co
+            {
+               	mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+               
+            yPlus
+            {
+               	mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+	        
+	        turbulenceProperties:R
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+	        
+	        vorticity
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+	        
+	        lambVector
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+		);
+	}
+	
+	#includeFunc totalTKE
+	
+	totalTKEAveraging
+	{
+	    type					fieldAverage;
+	    libs       				("libfieldFunctionObjects.so");
+	    enabled					true;
+	    writeControl			writeTime;
+	    timeStart				160;
+	    restartOnRestart		false;
+	    resetOnOutput			false;
+	        
+	    fields
+	    (
+	        totalTKE
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+		);
+	}
+	
+	probes
+	{
+		type				probes;
+		libs				("libsampling.so");
+		writeControl		timeStep;
+		writeInterval		1;
+		setFormat			csv;
+
+		fields
+		(
+			p U
+		);
+
+		probeLocations
+		(
+			(0.25 0.30 0.05)		//0
+			(0.30 0.30 0.05)		//1
+			(0.35 0.30 0.05)		//2
+			(0.40 0.30 0.05)		//3
+			(0.45 0.30 0.05)		//4
+			(0.50 0.30 0.05)		//5
+		);
+	}
+	
+	meanProbes
+	{
+		type 				probes;
+		libs				("libsampling.so");
+		writeControl		timeStep;
+		writeInterval		1;
+		setFormat			csv;
+		timeStart			150;
+		
+		fields
+		(
+			pMean UMean pPrime2Mean UPrime2Mean
+		);
+
+		probeLocations
+		(
+			(0.25 0.30 0.05)		//0
+			(0.30 0.30 0.05)		//1
+			(0.35 0.30 0.05)		//2
+			(0.40 0.30 0.05)		//3
+			(0.45 0.30 0.05)		//4
+			(0.50 0.30 0.05)		//5
+		);
+	}
+	
+	genericalPlanes
+	{
+		type				surfaces;
+		libs				("libsampling.so");
+		writeControl		onEnd;
+
+		interpolationScheme cell;
+		surfaceFormat		raw;
+
+		surfaces
+		(
+			p00
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0.30 0);
+					normal		(0 1 0);
+					zone		porousZone;
+				}
+			}
+			p01
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0.33 0);
+					normal		(0 1 0);
+					zone		porousZone;
+				}
+			}
+			p02
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0.36 0);
+					normal		(0 1 0);
+					zone		porousZone;
+				}
+			}
+			p03
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0.39 0);
+					normal		(0 1 0);
+					zone		porousZone;
+				}
+			}
+			p04
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0.42 0);
+					normal		(0 1 0);
+					zone		porousZone;
+				}
+			}
+			p05
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.28 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p06
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.32 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p07
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.35 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p08
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.38 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p09
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.42 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p10
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.45 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p11
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.48 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p12
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.01);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p13
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.02);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p14
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.03);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p15
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.04);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p16
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.05);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p17
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.06);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p18
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.07);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p19
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.08);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p20
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.09);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p21
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.10);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+		);
+
+		fields
+	    (
+	        UMean
+			pMean
+	        turbulenceProperties:RMean
+	        vorticityMean
+	        lambVectorMean
+		);
+	}
+	
+	runTimeControl1
+	{
+		type            runTimeControl;
+		libs            ("libutilityFunctionObjects.so");
+		timeStart		350;
+		writeControl	onEnd;
+		conditions
+		{
+			tracer
+			{
+				type            minMax;
+				functionObject  tracerVolAverage;
+				fields          (volAverage(porousZone,tracer));
+				value           0.05;
+				mode			minimum;
+			}
+		}
+	}
+	
+	#includeFunc residuals
+}
+
+// ************************************************************************* //

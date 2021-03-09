@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Saves 0.orig from being deleted
+mv 0.orig foo
+
+# Deletes Files
+rm -r constant/polyMesh
+rm -r processor*/
+rm -r dynamicCode
+rm -r log
+rm -r 0.* [1-9]*
+
+# Restores 0.orig
+mv foo 0.orig
+
+# Creates file for paraview
+CASE=${PWD##*/}
+touch $CASE.foam

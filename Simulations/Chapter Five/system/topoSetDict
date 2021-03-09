@@ -1,0 +1,178 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+actions
+(
+	{
+		name    porousZone;
+		type    cellZoneSet;
+		action  new;
+		source  boxToCell;
+		sourceInfo
+		{
+			box (0.25 0.30 0) (0.50 0.45 0.1);
+		}
+	}
+	
+	{
+		name    interfaceSelection;
+		type    faceSet;
+		action  new;
+		source  boxToFace;
+		sourceInfo
+		{
+			box (0.25 0.2999 0) (0.50 0.3001 0.1);
+		}
+	}
+	
+	{
+		name     interfaceSelection;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 1 0);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceSelection;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 0 1);
+		cos      0.01;
+	}
+	
+	{
+		name	interface;
+		type	faceZoneSet;
+		action 	new;
+		source	setToFaceZone;
+		faceSet	interfaceSelection;
+	}
+	
+	{
+		name    interfaceBottom;
+		type    faceSet;
+		action  new;
+		source  boxToFace;
+		sourceInfo
+		{
+			box (0.25 0.2999 0) (0.50 0.3001 0.033);
+		}
+	}
+	
+	{
+		name    interfaceMiddle;
+		type    faceSet;
+		action  new;
+		source  boxToFace;
+		sourceInfo
+		{
+			box (0.25 0.2999 0.033) (0.50 0.3001 0.066);
+		}
+	}
+	
+	{
+		name    interfaceTop;
+		type    faceSet;
+		action  new;
+		source  boxToFace;
+		sourceInfo
+		{
+			box (0.25 0.2999 0.066) (0.50 0.3001 0.1);
+		}
+	}
+	
+	{
+		name     interfaceBottom;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 1 0);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceBottom;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 0 1);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceMiddle;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 1 0);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceMiddle;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 0 1);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceTop;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 1 0);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceTop;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 0 1);
+		cos      0.01;
+	}
+	
+	{
+		name	interfaceBottom;
+		type	faceZoneSet;
+		action 	new;
+		source	setToFaceZone;
+		faceSet	interfaceBottom;
+	}
+	
+	{
+		name	interfaceMiddle;
+		type	faceZoneSet;
+		action 	new;
+		source	setToFaceZone;
+		faceSet	interfaceMiddle;
+	}
+	
+	{
+		name	interfaceTop;
+		type	faceZoneSet;
+		action 	new;
+		source	setToFaceZone;
+		faceSet	interfaceTop;
+	}
+);

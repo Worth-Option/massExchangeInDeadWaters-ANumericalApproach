@@ -1,0 +1,47 @@
+#!/bin/sh
+
+case=${PWD##*/}
+
+rm -rf log p* 0
+mkdir log
+cp -r 0.orig 0
+
+{ # try
+	echo -e "Compiled variables:\n"
+    blockMesh > log/blockMesh.log &&
+    printf '%*s' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
+    echo -e "blockMesh completed without errors"
+    #save your output
+
+} || { # catch
+    # save log for exceptio
+    echo -e "An error occured on blockMesh"
+    exit 1 
+}
+{
+    topoSet >log/topoSet.log &&
+    echo -e "topoSet completed without errors"
+} || {
+    echo -e "An error occured on topoSet"
+    exit 1 
+}
+{
+    checkMesh -allGeometry -allTopology -writeAllFields -writeSets vtk > log/checkMesh.log &&
+    echo -e "checkMesh completed without errors"
+} || {
+    echo -e "An error occured on checkMesh"
+    exit 1 
+}
+
+rm -rf dynamicCode
+
+{
+    setFields > log/setFields.log &&
+    echo -e "setFields completed without errors"
+} || {
+    echo -e "An error occured on setFields"
+    exit 1 
+}
+
+echo -e "Mesh constructed and checked."
+echo -e "Tracer fields set."

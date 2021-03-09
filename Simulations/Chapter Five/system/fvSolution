@@ -1,0 +1,133 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    location system;
+    object fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+	PIMPLE
+	{
+		nOuterCorrectors 3;
+		nCorrectors     3;
+		nNonOrthogonalCorrectors 0;
+		pRefPoint (0.15 0.15 0.1);
+		pRefValue 0;
+		
+		residualControl
+		{
+			"(p|U)"
+			{
+				tolerance		1e-04;
+				relTol			0;
+			}
+		}
+		
+		relaxationFactors
+		{
+			fields
+			{
+				p				0.4;
+				pFinal			1;
+			}
+	
+			equations
+			{
+				U				0.7;
+				UFinal			1;
+				nuTilda			1;
+				nuTildaFinal	1;            
+			}
+		}
+	}
+
+    solvers
+    {
+		p
+		{
+			solver          GAMG;
+			smoother        GaussSeidel;
+			tolerance       1e-04;
+			relTol          0.01;
+			minIter			1;
+        	maxIter         200;
+		}
+	
+		pFinal
+		{
+			$p;
+			smoother        GaussSeidel;
+			tolerance       1e-04;
+			relTol          0.01;
+		}
+	
+		U
+		{
+			solver          PBiCGStab;
+			preconditioner  diagonal;
+			tolerance       1e-04;
+			relTol          0.01;
+			minIter			1;
+          	maxIter         100;
+		}
+	
+		UFinal
+		{
+			$U;
+			tolerance       1e-04;
+			relTol          0.01;
+		}
+		
+		tracer
+		{
+			solver			PBiCGStab;
+			preconditioner	diagonal;
+            tolerance		1e-04;
+            relTol          0.01;
+            minIter			1;
+		}
+		
+		Phi
+		{
+			solver          GAMG;
+			smoother        GaussSeidel;
+			tolerance       1e-06;
+			relTol          0.01;
+          	maxIter         20;
+		}
+    }
+
+    relaxationFactors
+	{
+		fields
+		{
+			p				0.4;
+			pFinal			1;
+		}
+	
+		equations
+		{
+			U				0.7;
+			UFinal			1;
+			nuTilda			1;
+			nuTildaFinal	1;            
+		}
+	
+	}
+	
+	potentialFlow
+	{
+		nNonOrthogonalCorrectors 10;
+	}
+
+// ************************************************************************* //

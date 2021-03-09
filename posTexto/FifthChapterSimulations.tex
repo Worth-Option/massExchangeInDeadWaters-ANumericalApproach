@@ -1,0 +1,2226 @@
+\noindent In this appendix, the code in the chapter: The Effects of Vegetation Density Upon Flow and Mass Transport in Lateral Cavities. A copy of this configuration will also be available at the \href{https://github.com/Worth-Option/massExchangeInDeadWaters-ANumericalApproach}{Github} repository linked in the conclusion.
+
+\section{File Structure}
+\noindent
+The file structure of the script is shown bellow:
+\\
+\dirtree{%
+.1 /.
+.2 0.orig\DTcomment{Initial Boundary Conditions Folder}.
+.3 nut\DTcomment{Boundary conditions of turbulent viscosity}.
+.3 p\DTcomment{Boundary conditions of pressure}.
+.3 tracer\DTcomment{Boundary conditions of the inert scalar}.
+.3 O\DTcomment{Boundary conditions of velocity}.
+.2 constant\DTcomment{Mesh and General information about the simulation}.
+.3 fvOptions\DTcomment{Configuration of the porous media}.
+.3 g\DTcomment{Gravity}.
+.3 transportProperties\DTcomment{Fluid characteristics}.
+.3 turbulenceProperties\DTcomment{Turbulence settings}.
+.4 boundaryData\DTcomment{Pre-calculated fields for the inlet}.
+.5 inlet.
+.6 points.
+.6 0.
+.7 k.
+.7 L.
+.7 nut.
+.7 nuTilda.
+.7 omega.
+.7 p.
+.7 R.
+.7 U.
+.2 system\DTcomment{Main configuration folder}.
+.3 blockMeshDict\DTcomment{Mesh configuration}.
+.3 controlDict\DTcomment{Simulation Control}.
+.3 decomposeParDict\DTcomment{Configuration of the parallelisation of the grid}.
+.3 fvSchemes\DTcomment{Configuration of the used numerical schemes}.
+.3 fvSolution\DTcomment{Configuration of the solver}.
+.3 setFieldsDict\DTcomment{Set of the initial tracer fields}.
+.3 topoSetDict\DTcomment{Mesh manipulation}.
+.3 totalTKE.
+.2 allClear.
+.2 mesh\DTcomment{Bash script to aid the creation of the mesh}.
+.2 ramCache\DTcomment{Bash script to clear the memory cache}.
+.2 reconstructParParallel\DTcomment{Union of the parallel cases into a single directory}.
+.2 x\#\#\#.foam\DTcomment{Header file for the visualisation software (Paraview)}.
+}
+
+\section{0.orig/nut}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      nut;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 2 -1 0 0 0 0];
+
+internalField   uniform 0;
+
+boundaryField
+{
+    inlet
+	{
+		type       		timeVaryingMappedFixedValue;
+		setAverage      false;
+		perturb         0;
+    }
+    outlet
+    {
+        type            calculated;
+        value           uniform 0;
+    }
+    bottom
+    {
+        type            nutUSpaldingWallFunction;
+        value           uniform 0;
+        maxIter			100;
+        tolerance		1e-07;
+    }
+    lateralWall
+    {
+        type            nutUSpaldingWallFunction;
+        value           uniform 0;
+        maxIter			100;
+        tolerance		1e-07;
+    }
+    freeSurface
+    {
+        type            zeroGradient;
+    }
+    farField
+    {
+		type			zeroGradient;
+	}
+}
+
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{0.orig/p}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      p;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 2 -2 0 0 0 0];
+
+internalField   uniform 0;
+
+boundaryField
+{
+    inlet
+    {
+        type            zeroGradient;
+    }
+    outlet
+    {
+        type            fixedValue;
+        value           uniform 0;
+    }
+    bottom
+    {
+        type            zeroGradient;
+    }
+    lateralWall
+    {
+        type            zeroGradient;
+    }
+    freeSurface
+    {
+        type            zeroGradient;
+    }
+    farField
+    {
+		type			zeroGradient;
+	}
+}
+
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{0.orig/tracer}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      tracer;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 0 0 0 0];
+
+internalField   uniform 0;
+
+boundaryField
+{
+    inlet           
+    {
+        type			zeroGradient;
+    }
+    outlet          
+    {
+        type			zeroGradient;
+    }
+    bottom
+    {
+        type            zeroGradient;
+    }
+    lateralWall
+    {
+        type            zeroGradient;
+    }
+    farField
+    {
+        type            zeroGradient;
+    }
+    freeSurface
+    {
+        type            zeroGradient;
+    }
+}
+
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{0.orig/U}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    location    "0";
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0.101 0 0);
+
+boundaryField
+{
+    inlet
+    {
+		type        	turbulentDFSEMInlet;
+        delta       	0.021;
+        interpolateU	true;
+        interpolateL	true;
+        interpolateR	true;
+        value       	uniform (0.101 0 0);
+    }
+    outlet
+    {
+        type            zeroGradient;
+    }
+    bottom
+    {
+        type            noSlip;
+    }
+    lateralWall
+    {
+        type            noSlip;
+    }
+    freeSurface
+    {
+        type            slip;
+    }
+    farField
+    {
+		type			slip;
+	}
+}
+
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{constant/fvOptions}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      fvOptions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+embayment
+{
+    type            explicitPorositySource;
+    active			true;
+	selectionMode   cellZone;
+	cellZone        embayment;
+
+    explicitPorositySourceCoeffs
+    {
+        selectionMode   cellZone;
+        cellZone        embayment;
+
+        type            DarcyForchheimer;
+		
+		mu	mu;
+        d   (116.62 116.62 4.51E-04);	//Original values d   (116.62 116.62 4.51E-04);
+        f   (3.09 3.09 6.08E-03);		//Original values f   (3.09 3.09 6.08E-03);
+
+        coordinateSystem
+        {
+            origin  (0.25 0.30 0);
+            e1      (1 0 0);
+            e2      (0 1 0);
+        }
+    }
+}
+
+
+//************************************************************************* //
+
+\end{lstlisting}
+
+\section{constant/g}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       uniformDimensionedVectorField;
+    location    "constant";
+    object      g;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -2 0 0 0 0];
+value           (0 0 -9.81);
+
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{constant/transportProperties}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    location constant;
+    object transportProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+	transportModel  Newtonian;
+	nu              [ 0 2 -1 0 0 0 0 ]	1E-6;
+	mu				[ 1 -1 -1 0 0 0 0 ]	1E-03
+	rho             [ 1 -3 0 0 0 0 0 ]	1000;	
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{constant/turbulenceProperties}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      turbulenceProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+simulationType LES;
+
+LES
+{
+	turbulence      on;
+	LESModel		WALE;
+	printCoeffs		on;
+	
+	delta           cubeRootVol; //since the WALE model does not require damping close to the wall
+}
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{system/blockMeshDict}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    location system;
+    object blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+    // Geometry Parameters
+    inletX			0.25;
+    channelY		0.30;
+    embX			#calc "$inletX + 0.25";
+    embY			#calc "$channelY + 0.15";
+    outletX			#calc "2*$embX + $inletX";
+    depth			0.1;
+    
+    // Mesh Parameters
+    z				40;
+    embx			80;
+    emby			80;
+    
+    ioX				40;
+    outX			120;
+    ioY				120;
+
+	gradingX		1;
+	gradingXinv		1;
+	gradingY		2;
+	gradingYinv		0.5;
+	
+	embGradingY		2;
+	embGradingYinv	0.5;
+	
+	gradingZ		41;
+
+    scale 1;
+    vertices  
+    (
+      // Bottom Vertices
+      (0.00 0.00 0.000)						//0
+      ($inletX 0.00 0.000)					//1
+      ($embX 0.00 0.000)					//2
+      ($outletX 0.00 0.000)					//3
+      ($outletX $channelY 0.000)			//4
+      ($embX $channelY 0.000)				//5
+      ($inletX $channelY 0.000)				//6
+      (0.00 $channelY 0.000)				//7
+      ($embX $embY 0.000)					//8
+      ($inletX $embY 0.000)					//9
+		
+      // Upper Vertices	
+      (0.00 0.00 $depth)					//10
+      ($inletX 0.00 $depth)					//11
+      ($embX 0.00 $depth)					//12
+      ($outletX 0.00 $depth)				//13
+      ($outletX $channelY $depth)			//14
+      ($embX $channelY $depth)				//15
+      ($inletX $channelY $depth)			//16
+      (0.00 $channelY $depth)				//17
+      ($embX $embY $depth)					//18
+      ($inletX $embY $depth)				//19
+    );
+
+    blocks  
+    ( 	
+		hex
+		( 6 5 8 9 16 15 18 19)
+		embayment
+		( $embx $emby $z)
+		simpleGrading
+		(
+			(
+				(0.1 0.2 $embGradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $embGradingYinv)
+			)
+			(
+				(0.1 0.2 $embGradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $embGradingYinv)
+			)
+			$gradingZ
+		)
+		
+		hex
+		( 0 1 6 7 10 11 16 17)
+		inlet_channel
+		( $ioX $ioY $z)
+		simpleGrading
+		(
+			1
+			//(
+			//	(0.25 0.3 $gradingX)
+			//	(0.50 0.4 1)
+			//	(0.25 0.3 $gradingXinv)
+			//)
+			(
+				(0.1 0.2 $gradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $gradingYinv)
+			)
+			$gradingZ
+		)
+
+		
+	
+		hex
+		( 1 2 5 6 11 12 15 16)
+		middle_channel
+		( $embx $ioY $z)
+		simpleGrading
+		(
+			(
+				(0.1 0.2 $embGradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $embGradingYinv)
+			)
+			(
+				(0.1 0.2 $gradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $gradingYinv)
+			)
+			$gradingZ
+		)
+		
+		hex
+		( 2 3 4 5 12 13 14 15)
+		outlet_channel
+		( $outX $ioY $z)
+		simpleGrading
+		(
+			1
+			//(
+			//	(0.25 0.3 $gradingX)
+			//	(0.50 0.4 1)
+			//	(0.25 0.3 $gradingXinv)
+			//)
+			(
+				(0.1 0.2 $gradingY)
+				(0.8 0.6 1)
+				(0.1 0.2 $gradingYinv)
+			)
+			$gradingZ
+		)
+    );
+
+    edges  
+    (
+    );
+
+    boundary  
+    (
+	inlet
+	{
+		type	patch;
+		faces
+		(
+			( 0 7 17 10)
+		);
+	}
+	outlet
+	{
+		type 	patch;
+		faces
+		(
+			( 3 4 14 13)
+		);
+	}
+	bottom
+	{
+		type 	wall;
+		faces
+		(
+			( 0 1 6 7)
+			( 1 2 5 6)
+			( 2 3 4 5)
+			( 6 5 8 9)
+		);
+	}
+	lateralWall
+	{	
+		type 	wall;
+		faces
+		(
+			( 7 6 16 17)
+			( 6 9 19 16)
+			( 9 8 18 19)
+			( 5 15 18 8)
+			( 5 4 14 15)
+		);
+	}
+	farField
+	{
+		type	wall;
+		faces
+		(
+			( 0 10 11 1)
+			( 1 11 12 2)
+			( 2 12 13 3)
+		);
+	}
+	freeSurface
+	{
+		type 	wall;
+		faces
+		(
+			( 10 11 16 17)
+			( 11 12 15 16)
+			( 12 13 14 15)
+			( 16 15 18 19)
+		);
+	}
+    );
+    mergePatchPairs  
+    (
+    );
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{system/controlDict}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    location system;
+    object controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+	application				pimpleFoam;
+    startFrom				latestTime;
+    startTime				0;
+    stopAt					endTime;
+    endTime					1000;
+    deltaT					1.0E-3;
+    writeControl			adjustableRunTime;
+    writeInterval			10;
+    purgeWrite				0;
+    writeFormat				ascii;
+    writePrecision			6;
+    writeCompression		yes;
+    timeFormat				general;
+    timePrecision			6;
+    graphFormat				raw;
+    runTimeModifiable		yes;
+    adjustTimeStep			true;
+    maxCo					0.90;
+    maxDeltaT				0.05;
+
+functions
+{
+	turbulenceFields1
+	{
+		type					turbulenceFields;
+		libs					("libfieldFunctionObjects.so");
+		writeControl			writeTime;
+		timeStart       		150;
+		fields					(R nuTilda L k I);
+	}
+	
+	Q1 //second invariant of the velocity gradient tensor
+	{
+		type            		Q;
+		libs            		("libfieldFunctionObjects.so");
+		timeStart       		150;
+		writeControl    		writeTime;
+	}
+
+	yPlus1
+	{
+	    type       				yPlus;
+	    libs       				("libfieldFunctionObjects.so");
+	    timeStart       		150;
+	    writeControl			writeTime;
+	}
+	
+	Co1
+	{
+		type					CourantNo;
+		libs					("libfieldFunctionObjects.so");
+		timeStart       		150;
+		writeControl			writeTime;
+	}
+
+	vorticity1
+	{
+		type        			vorticity;
+		libs        			("libfieldFunctionObjects.so");
+		timeStart       		150;
+		writeControl    		writeTime;
+	}
+	
+	wallShearStress1
+	{
+		type            		wallShearStress;
+		libs            		("libfieldFunctionObjects.so");
+		timeStart       		150;
+		writeControl    		writeTime;
+	
+	}
+	
+	LambVector1	//cross product of a velocity vector [m/s] and vorticity vector [1/s]
+	{
+		type        			lambVector;
+		libs            		("libfieldFunctionObjects.so");
+		libs            		("libfieldFunctionObjects.so");
+		timeStart       		150;
+		writeControl    		writeTime;
+	}
+	
+	//#includeFunc absUy
+	
+	UyExtract
+	{
+		type					components;
+		libs            		(fieldFunctionObjects);
+		field					U;
+		timeStart       		150;
+		writeControl			none;
+	}
+	
+	absUy
+	{
+		type					mag;
+		libs            		(fieldFunctionObjects);
+		field					Uy;
+		result					absUy;
+		timeStart       		150;
+		writeControl			none;
+	}
+	
+	surfaceInterpolate1
+	{
+		type            		surfaceInterpolate;
+		libs            		(fieldFunctionObjects);
+		fields      			((absUy absUySurface));
+		timeStart       		150;
+		writeControl			none;
+	}
+	
+	velocityInterface
+	{
+		type            		surfaceFieldValue;
+		libs            		(fieldFunctionObjects);
+		fields          		(absUySurface);
+		operation       		areaIntegrate;
+		regionType      		faceZone;
+		name            		interface;
+		timeStart       		150;
+		executeControl  		timeStep;
+		executeInterval 		1;
+		writeControl    		timeStep;
+		writeInterval   		1;
+		writeFields     		false;
+	}
+	
+	tracer
+	{
+		type 					scalarTransport;
+		libs					("libsolverFunctionObjects.so");
+		enabled					true;
+		timeStart				150;
+		writeControl			writeTime;
+		log						yes;
+
+		nCorr					1;
+
+		// Turbulent diffusivity;
+		alphaD					0.001;		// Molecular diffusivity
+		alphaDt					1.111;		// Turbulent diffusivity (alphaDt = 1 / Sct)
+		
+		// Bounds the transported scalar within 0 and 1
+		bounded01				true;
+		
+		//name of field
+		field					tracer;
+	}
+	
+	tracerVolAverage
+	{
+		type            		volFieldValue;
+		libs            		("libfieldFunctionObjects.so");
+	
+		log             		true;
+		timeStart				150;
+		writeControl			timeStep;
+		writeInterval			1;
+		writeFields     		true;
+			
+		regionType      		cellZone;
+		name            		porousZone;
+		operation       		volAverage;
+	
+		fields
+		(
+			tracer
+		);
+	}
+	
+	surfaceInterpolateTracer
+	{
+		type            		surfaceInterpolate;
+		libs            		(fieldFunctionObjects);
+		fields      			((tracer tracerSurface));
+		timeStart       		150;
+		writeControl			none;
+	}
+	
+	tracerBottom
+	{
+		type            		surfaceFieldValue;
+		libs            		(fieldFunctionObjects);
+		fields          		(tracerSurface);
+		operation       		average;
+		regionType      		faceZone;
+		name            		interfaceBottom;
+		timeStart       		150;
+		executeControl  		timeStep;
+		executeInterval 		1;
+		writeControl    		timeStep;
+		writeInterval   		1;
+		writeFields     		false;
+	}
+	
+	tracerMiddle
+	{
+		type            		surfaceFieldValue;
+		libs            		(fieldFunctionObjects);
+		fields          		(tracerSurface);
+		operation       		average;
+		regionType      		faceZone;
+		name            		interfaceMiddle;
+		timeStart       		150;
+		executeControl  		timeStep;
+		executeInterval 		1;
+		writeControl    		timeStep;
+		writeInterval   		1;
+		writeFields     		false;
+	}
+	
+	tracerTop
+	{
+		type            		surfaceFieldValue;
+		libs            		(fieldFunctionObjects);
+		fields          		(tracerSurface);
+		operation       		average;
+		regionType      		faceZone;
+		name            		interfaceTop;
+		timeStart       		150;
+		executeControl  		timeStep;
+		executeInterval 		1;
+		writeControl    		timeStep;
+		writeInterval   		1;
+		writeFields     		false;
+	}
+	
+ 	generalVariablesAveraging
+	{
+	    type					fieldAverage;
+	    libs       				("libfieldFunctionObjects.so");
+	    enabled					true;
+	    writeControl			writeTime;
+	    timeStart				150;
+	    restartOnRestart		false;
+	    resetOnOutput			false;
+	        
+	    fields
+	    (
+	        U
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+
+			p
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+               
+            Co
+            {
+               	mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+               
+            yPlus
+            {
+               	mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+	        
+	        turbulenceProperties:R
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+	        
+	        vorticity
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+	        
+	        lambVector
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+		);
+	}
+	
+	#includeFunc totalTKE
+	
+	totalTKEAveraging
+	{
+	    type					fieldAverage;
+	    libs       				("libfieldFunctionObjects.so");
+	    enabled					true;
+	    writeControl			writeTime;
+	    timeStart				160;
+	    restartOnRestart		false;
+	    resetOnOutput			false;
+	        
+	    fields
+	    (
+	        totalTKE
+	        {
+	            mean			on;
+	            prime2Mean		on;
+	            base			time;
+	        }
+		);
+	}
+	
+	probes
+	{
+		type				probes;
+		libs				("libsampling.so");
+		writeControl		timeStep;
+		writeInterval		1;
+		setFormat			csv;
+
+		fields
+		(
+			p U
+		);
+
+		probeLocations
+		(
+			(0.25 0.30 0.05)		//0
+			(0.30 0.30 0.05)		//1
+			(0.35 0.30 0.05)		//2
+			(0.40 0.30 0.05)		//3
+			(0.45 0.30 0.05)		//4
+			(0.50 0.30 0.05)		//5
+		);
+	}
+	
+	meanProbes
+	{
+		type 				probes;
+		libs				("libsampling.so");
+		writeControl		timeStep;
+		writeInterval		1;
+		setFormat			csv;
+		timeStart			150;
+		
+		fields
+		(
+			pMean UMean pPrime2Mean UPrime2Mean
+		);
+
+		probeLocations
+		(
+			(0.25 0.30 0.05)		//0
+			(0.30 0.30 0.05)		//1
+			(0.35 0.30 0.05)		//2
+			(0.40 0.30 0.05)		//3
+			(0.45 0.30 0.05)		//4
+			(0.50 0.30 0.05)		//5
+		);
+	}
+	
+	genericalPlanes
+	{
+		type				surfaces;
+		libs				("libsampling.so");
+		writeControl		onEnd;
+
+		interpolationScheme cell;
+		surfaceFormat		raw;
+
+		surfaces
+		(
+			p00
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0.30 0);
+					normal		(0 1 0);
+					zone		porousZone;
+				}
+			}
+			p01
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0.33 0);
+					normal		(0 1 0);
+					zone		porousZone;
+				}
+			}
+			p02
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0.36 0);
+					normal		(0 1 0);
+					zone		porousZone;
+				}
+			}
+			p03
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0.39 0);
+					normal		(0 1 0);
+					zone		porousZone;
+				}
+			}
+			p04
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0.42 0);
+					normal		(0 1 0);
+					zone		porousZone;
+				}
+			}
+			p05
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.28 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p06
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.32 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p07
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.35 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p08
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.38 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p09
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.42 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p10
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.45 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p11
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0.48 0 0);
+					normal		(1 0 0);
+					zone		porousZone;
+				}
+			}
+			p12
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.01);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p13
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.02);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p14
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.03);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p15
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.04);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p16
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.05);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p17
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.06);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p18
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.07);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p19
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.08);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p20
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.09);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+			p21
+			{
+				type            cuttingPlane;
+				planeType		pointAndNormal;
+
+				pointAndNormalDict
+				{
+					point		(0 0 0.10);
+					normal		(0 0 1);
+					zone		porousZone;
+				}
+			}
+		);
+
+		fields
+	    (
+	        UMean
+			pMean
+	        turbulenceProperties:RMean
+	        vorticityMean
+	        lambVectorMean
+		);
+	}
+	
+	runTimeControl1
+	{
+		type            runTimeControl;
+		libs            ("libutilityFunctionObjects.so");
+		timeStart		350;
+		writeControl	onEnd;
+		conditions
+		{
+			tracer
+			{
+				type            minMax;
+				functionObject  tracerVolAverage;
+				fields          (volAverage(porousZone,tracer));
+				value           0.05;
+				mode			minimum;
+			}
+		}
+	}
+	
+	#includeFunc residuals
+}
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{system/decomposeParDict}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      decomposeParDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+numberOfSubdomains    48;
+
+method          scotch;
+
+scotchCoeffs
+{
+}
+
+constraints
+{
+	// Keep owner and neighbour on same processor for faces in zones
+	faces
+    {
+        type    preserveFaceZones;
+        zones   (interface interfaceBottom interfaceMiddle interfaceTop);
+        enabled true;
+    }
+}
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{system/fvSchemes}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    location system;
+    object fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+    ddtSchemes
+    {
+        default	backward;
+    }
+
+    gradSchemes
+    {
+        default Gauss linear;
+    }
+
+    divSchemes
+	{
+		default         none;
+		div(phi,U)      Gauss LUST grad(U);
+		div(phi,nuTilda) Gauss limitedLinear 0.1;
+		div((nuEff*dev2(T(grad(U))))) Gauss linear;
+		
+		div(phi,tracer) Gauss limitedLinear01 1;
+	}
+
+    interpolationSchemes
+    {
+        default			linear;
+    }
+
+    laplacianSchemes
+    {
+        default         Gauss linear orthogonal;
+    }
+
+    snGradSchemes
+    {
+        default			orthogonal;
+    }
+
+	wallDist
+    {
+        method meshWave;
+    }
+
+    fluxRequired
+    {
+        default no;
+        p ;
+        Phi ;
+    }
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{system/fvSolution}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    location system;
+    object fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+	PIMPLE
+	{
+		nOuterCorrectors 3;
+		nCorrectors     3;
+		nNonOrthogonalCorrectors 0;
+		pRefPoint (0.15 0.15 0.1);
+		pRefValue 0;
+		
+		residualControl
+		{
+			"(p|U)"
+			{
+				tolerance		1e-04;
+				relTol			0;
+			}
+		}
+		
+		relaxationFactors
+		{
+			fields
+			{
+				p				0.4;
+				pFinal			1;
+			}
+	
+			equations
+			{
+				U				0.7;
+				UFinal			1;
+				nuTilda			1;
+				nuTildaFinal	1;            
+			}
+		}
+	}
+
+    solvers
+    {
+		p
+		{
+			solver          GAMG;
+			smoother        GaussSeidel;
+			tolerance       1e-04;
+			relTol          0.01;
+			minIter			1;
+        	maxIter         200;
+		}
+	
+		pFinal
+		{
+			$p;
+			smoother        GaussSeidel;
+			tolerance       1e-04;
+			relTol          0.01;
+		}
+	
+		U
+		{
+			solver          PBiCGStab;
+			preconditioner  diagonal;
+			tolerance       1e-04;
+			relTol          0.01;
+			minIter			1;
+          	maxIter         100;
+		}
+	
+		UFinal
+		{
+			$U;
+			tolerance       1e-04;
+			relTol          0.01;
+		}
+		
+		tracer
+		{
+			solver			PBiCGStab;
+			preconditioner	diagonal;
+            tolerance		1e-04;
+            relTol          0.01;
+            minIter			1;
+		}
+		
+		Phi
+		{
+			solver          GAMG;
+			smoother        GaussSeidel;
+			tolerance       1e-06;
+			relTol          0.01;
+          	maxIter         20;
+		}
+    }
+
+    relaxationFactors
+	{
+		fields
+		{
+			p				0.4;
+			pFinal			1;
+		}
+	
+		equations
+		{
+			U				0.7;
+			UFinal			1;
+			nuTilda			1;
+			nuTildaFinal	1;            
+		}
+	
+	}
+	
+	potentialFlow
+	{
+		nNonOrthogonalCorrectors 10;
+	}
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{system/setFieldsDict}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      setFieldsDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+defaultFieldValues
+(
+    volScalarFieldValue tracer 0
+);
+
+regions
+(
+    // Setting values inside a box
+    boxToCell
+    {
+        box     (0.25 0.30 0) (0.50 0.45 0.10);
+        fieldValues
+        (
+            volScalarFieldValue tracer 1
+        );
+    }
+);
+
+
+// ************************************************************************* //
+
+\end{lstlisting}
+
+\section{system/topoSetDict}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+actions
+(
+	{
+		name    porousZone;
+		type    cellZoneSet;
+		action  new;
+		source  boxToCell;
+		sourceInfo
+		{
+			box (0.25 0.30 0) (0.50 0.45 0.1);
+		}
+	}
+	
+	{
+		name    interfaceSelection;
+		type    faceSet;
+		action  new;
+		source  boxToFace;
+		sourceInfo
+		{
+			box (0.25 0.2999 0) (0.50 0.3001 0.1);
+		}
+	}
+	
+	{
+		name     interfaceSelection;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 1 0);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceSelection;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 0 1);
+		cos      0.01;
+	}
+	
+	{
+		name	interface;
+		type	faceZoneSet;
+		action 	new;
+		source	setToFaceZone;
+		faceSet	interfaceSelection;
+	}
+	
+	{
+		name    interfaceBottom;
+		type    faceSet;
+		action  new;
+		source  boxToFace;
+		sourceInfo
+		{
+			box (0.25 0.2999 0) (0.50 0.3001 0.033);
+		}
+	}
+	
+	{
+		name    interfaceMiddle;
+		type    faceSet;
+		action  new;
+		source  boxToFace;
+		sourceInfo
+		{
+			box (0.25 0.2999 0.033) (0.50 0.3001 0.066);
+		}
+	}
+	
+	{
+		name    interfaceTop;
+		type    faceSet;
+		action  new;
+		source  boxToFace;
+		sourceInfo
+		{
+			box (0.25 0.2999 0.066) (0.50 0.3001 0.1);
+		}
+	}
+	
+	{
+		name     interfaceBottom;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 1 0);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceBottom;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 0 1);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceMiddle;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 1 0);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceMiddle;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 0 1);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceTop;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 1 0);
+		cos      0.01;
+	}
+	
+	{
+		name     interfaceTop;
+		type     faceSet;
+		action   subtract;
+		source   normalToFace;
+		normal   (0 0 1);
+		cos      0.01;
+	}
+	
+	{
+		name	interfaceBottom;
+		type	faceZoneSet;
+		action 	new;
+		source	setToFaceZone;
+		faceSet	interfaceBottom;
+	}
+	
+	{
+		name	interfaceMiddle;
+		type	faceZoneSet;
+		action 	new;
+		source	setToFaceZone;
+		faceSet	interfaceMiddle;
+	}
+	
+	{
+		name	interfaceTop;
+		type	faceZoneSet;
+		action 	new;
+		source	setToFaceZone;
+		faceSet	interfaceTop;
+	}
+);
+
+\end{lstlisting}
+
+\section{system/totalTKE}
+\begin{lstlisting}
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+totalTKE
+{
+	type			coded;
+	libs			("libutilityFunctionObjects.so");
+	name			totalTKE;
+	executeControl	timeStep;
+	writeControl	writeTime;
+	timeStart		155;
+	// timeEnd		0;
+	enabled			true;
+
+/*---------------------------------------------------------------------------*\
+
+	Total Turbulent Kinect Energy Evaluation
+		** Requires fieldAverage Function to Obtain UPrime2Mean**
+			** Resolved Reynolds Stress Tensor
+		** Requires turbulenceFields Function to Obtain R**
+			** Subgrid Reynolds Stress Tensor
+
+\*---------------------------------------------------------------------------*/
+
+	codeExecute
+	#{
+		static autoPtr<volScalarField> totalTKE;
+
+		if
+		(
+			mesh().foundObject<volSymmTensorField>("UPrime2Mean")
+			&&
+			mesh().foundObject<volSymmTensorField>("turbulenceProperties:R")
+			&&
+			mesh().foundObject<volScalarField>("totalTKE") == 0
+		)
+		{
+			Info << "Turbulent Kinect Energy:" << endl;
+			Info << "	Initialising" << endl;
+			Info << "	Calculating" << nl << endl;
+
+			totalTKE.set
+			(
+				new volScalarField
+				(
+					IOobject
+					(
+						"totalTKE",
+						mesh().time().timeName(),
+						mesh(),
+						IOobject::NO_READ,
+						IOobject::AUTO_WRITE
+					),
+					mesh(),
+					dimensionedScalar
+					(
+						"totalTKE",
+						dimensionSet(0,2,-2,0,0,0,0),
+						0
+					)
+				)
+			);
+
+			const volSymmTensorField& R = mesh().lookupObjectRef<volSymmTensorField>("turbulenceProperties:R");
+			const volSymmTensorField& UPrime2Mean = mesh().lookupObjectRef<volSymmTensorField>("UPrime2Mean");
+
+			volScalarField& totalTKE = mesh().lookupObjectRef<volScalarField>("totalTKE");
+			totalTKE = (0.5 * tr(R)) + (0.5 * tr(UPrime2Mean));
+		}
+
+		else if
+		(
+			mesh().foundObject<volSymmTensorField>("UPrime2Mean")
+			&&
+			mesh().foundObject<volSymmTensorField>("turbulenceProperties:R")
+			&&
+			mesh().foundObject<volScalarField>("totalTKE")
+		)
+		{
+			Info << "Turbulent Kinect Energy:" << endl;
+			Info << "	Calculating" << nl << endl;
+
+			const volSymmTensorField& R = mesh().lookupObjectRef<volSymmTensorField>("turbulenceProperties:R");
+			const volSymmTensorField& UPrime2Mean = mesh().lookupObjectRef<volSymmTensorField>("UPrime2Mean");
+
+			volScalarField& totalTKE = mesh().lookupObjectRef<volScalarField>("totalTKE");
+			totalTKE = (0.5 * tr(R)) + (0.5 * tr(UPrime2Mean));
+		}
+
+		else
+		{
+			Info << "Turbulent Kinect Energy:" << endl;
+			Warning << endl
+					<< "	Unable to Calculate Turbulent Kinect Energy" << endl
+					<< "	UPrime2Mean and/or R Unavailable" << endl
+					<< "	Enable fieldAverage and turbulenceFields Functions" << nl << endl;
+		}
+	#};
+}
+
+\end{lstlisting}
+
+\section{allClear}
+\begin{lstlisting}[language=bash]
+#!/bin/bash
+
+# Saves 0.orig from being deleted
+mv 0.orig foo
+
+# Deletes Files
+rm -r constant/polyMesh
+rm -r processor*/
+rm -r dynamicCode
+rm -r log
+rm -r 0.* [1-9]*
+
+# Restores 0.orig
+mv foo 0.orig
+
+# Creates file for paraview
+CASE=${PWD##*/}
+touch $CASE.foam
+
+\end{lstlisting}
+
+\section{mesh}
+\begin{lstlisting}[language=bash]
+#!/bin/sh
+
+case=${PWD##*/}
+
+rm -rf log p* 0
+mkdir log
+cp -r 0.orig 0
+
+{ # try
+	echo -e "Compiled variables:\n"
+    blockMesh > log/blockMesh.log &&
+    printf '%*s' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
+    echo -e "blockMesh completed without errors"
+    #save your output
+
+} || { # catch
+    # save log for exceptio
+    echo -e "An error occured on blockMesh"
+    exit 1 
+}
+{
+    topoSet >log/topoSet.log &&
+    echo -e "topoSet completed without errors"
+} || {
+    echo -e "An error occured on topoSet"
+    exit 1 
+}
+{
+    checkMesh -allGeometry -allTopology -writeAllFields -writeSets vtk > log/checkMesh.log &&
+    echo -e "checkMesh completed without errors"
+} || {
+    echo -e "An error occured on checkMesh"
+    exit 1 
+}
+
+rm -rf dynamicCode
+
+{
+    setFields > log/setFields.log &&
+    echo -e "setFields completed without errors"
+} || {
+    echo -e "An error occured on setFields"
+    exit 1 
+}
+
+echo -e "Mesh constructed and checked."
+echo -e "Tracer fields set."
+
+\end{lstlisting}
+
+\section{ramCache}
+\begin{lstlisting}[language=bash]
+#!/bin/bash
+
+free && sync && echo 3 > /proc/sys/vm/drop_caches && free
+
+\end{lstlisting}
+
+\section{reconstructParParallel}
+\begin{lstlisting}[language=bash]
+#!/bin/bash
+echo "
+      K. Wardle 6/22/09, modified by H. Stadler Dec. 2013, minor fix Will Bateman Sep 2014.
+      bash script to run reconstructPar in pseudo-parallel mode
+      by breaking time directories into multiple ranges
+     "
+     
+USAGE="
+      USAGE: $0 -n <NP> -f fields -o <OUTPUTFILE>
+        -f (fields) is optional, fields given in the form T,U,p; option is passed on to reconstructPar
+  -t (times) is optional, times given in the form tstart,tstop
+        -o (output) is optional 
+"
+
+#TODO: add flag to trigger deletion of original processorX directories after successful reconstruction
+# At first check whether any flag is set at all, if not exit with error message
+if [ $# == 0 ]; then
+    echo "$USAGE"
+    exit 1
+fi
+
+#Use getopts to pass the flags to variables
+while getopts "f:n:o:t:" opt; do
+  case $opt in
+    f) if [ -n $OPTARG ]; then
+  FIELDS=$(echo $OPTARG | sed 's/,/ /g')
+  fi
+      ;;
+    n) if [ -n $OPTARG ]; then
+  NJOBS=$OPTARG
+  fi
+      ;;
+    o) if [ -n $OPTARG ]; then
+  OUTPUTFILE=$OPTARG
+       fi
+      ;;
+    t) if [ -n $OPTARG ]; then
+  TLOW=$(echo $OPTARG | cut -d ',' -f1)
+  THIGH=$(echo $OPTARG | cut -d ',' -f2)
+  fi
+      ;;
+    \?)
+      echo "$USAGE" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+
+# check whether the number of jobs has been passed over, if not exit with error message
+if [[ -z $NJOBS ]]
+then
+    echo "
+      the flag -n <NP> is required!
+       "
+    echo "$USAGE"
+    exit 1
+fi
+
+APPNAME="reconstructPar"
+
+echo "running $APPNAME in pseudo-parallel mode on $NJOBS processors"
+
+#count the number of time directories
+NSTEPS=$(($(ls -d processor0/[0-9]*/ | wc -l)-1))
+NINITAL=$(ls -d [0-9]*/ | wc -l) ##count time directories in case root dir, this will include 0
+
+P=p
+#find min and max time
+TMIN=$(ls processor0 -1v | sed '/constant/d' | sort -g | sed -n 2$P) # modified to omit constant and first time directory
+#TMIN=`ls processor0 | sort -nr | tail -1`
+TMAX=$(ls processor0 -1v | sed '/constant/d' | sort -gr | head -1) # modified to omit constant directory
+#TMAX=`ls processor0 | sort -nr | head -1`
+
+#Adjust min and max time according to the parameters passed over
+if [ -n "$TLOW" ]
+  then
+    TMIN=$(ls processor0 -1v | sed '/constant/d' | sort -g | sed -n 1$P) # now allow the first directory
+    NLOW=2
+    NHIGH=$NSTEPS
+    # At first check whether the times are given are within the times in the directory
+    if [ $(echo "$TLOW > $TMAX" | bc) == 1 ]; then
+        echo "
+      TSTART ($TLOW) > TMAX ($TMAX)
+      Adjust times to be reconstructed!
+      "
+        echo "$USAGE"
+        exit 1
+    fi
+    if [ $(echo "$THIGH < $TMIN" | bc) == 1 ]; then
+        echo "
+      TSTOP ($THIGH) < TMIN ($TMIN)
+      Adjust times to be reconstructed!
+      "
+        echo "$USAGE"
+        exit 1
+    fi
+  
+    # Then set Min-Time
+    until [ $(echo "$TMIN >= $TLOW" | bc) == 1 ]; do
+      TMIN=$(ls processor0 -1v | sed -n $NLOW$P)
+      NSTART=$(($NLOW))
+      let NLOW=NLOW+1
+    done
+
+    # And then set Max-Time
+    until [ $(echo "$TMAX <= $THIGH" | bc) == 1 ]; do
+      TMAX=$(ls processor0 -1v | sed -n $NHIGH$P)
+      let NHIGH=NHIGH-1
+    done
+
+    # Finally adjust the number of directories to be reconstructed
+    NSTEPS=$(($NHIGH-$NLOW+3))
+
+  else
+
+    NSTART=2
+
+fi
+
+echo "reconstructing $NSTEPS time directories"
+
+NCHUNK=$(($NSTEPS/$NJOBS))
+NREST=$(($NSTEPS%$NJOBS))
+TSTART=$TMIN
+
+echo "making temp dir"
+TEMPDIR="temp.parReconstructPar"
+mkdir $TEMPDIR
+
+PIDS=""
+for i in $(seq $NJOBS)
+do
+  if [ $NREST -ge 1 ]
+    then
+      NSTOP=$(($NSTART+$NCHUNK))
+      let NREST=$NREST-1
+    else
+      NSTOP=$(($NSTART+$NCHUNK-1))
+  fi
+  TSTOP=$(ls processor0 -1v | sed -n $NSTOP$P)
+
+
+  if [ $i == $NJOBS ] 
+  then
+  TSTOP=$TMAX
+  fi
+
+  if [ $NSTOP -ge $NSTART ]
+    then  
+    echo "Starting Job $i - reconstructing time = $TSTART through $TSTOP"
+    if [ -n "$FIELDS" ]
+      then
+        $($APPNAME -fields "($FIELDS)" -time $TSTART:$TSTOP > $TEMPDIR/output-$TSTOP &)
+  echo "Job started with PID $(pgrep -n -x $APPNAME)"
+  PIDS="$PIDS $(pgrep -n -x $APPNAME)" # get the PID of the latest (-n) job exactly matching (-x) $APPNAME
+      else
+        $($APPNAME -time $TSTART:$TSTOP > $TEMPDIR/output-$TSTOP &)
+  echo "Job started with PID $(pgrep -n -x $APPNAME)"
+  PIDS="$PIDS $(pgrep -n -x $APPNAME)"
+    fi
+   fi
+
+  let NSTART=$NSTOP+1
+  TSTART=$(ls processor0 -1v | sed -n $NSTART$P)
+done
+
+#sleep until jobs finish
+#if number of jobs > NJOBS, hold loop until job finishes
+NMORE_OLD=$(echo 0)
+until [ $(ps -p $PIDS | wc -l) -eq 1 ]; # check for PIDS instead of $APPNAME because other instances might also be running 
+  do 
+    sleep 10
+    NNOW=$(ls -d [0-9]*/ | wc -l) ##count time directories in case root dir, this will include 0
+    NMORE=$(echo $NSTEPS-$NNOW+$NINITAL | bc) ##calculate number left to reconstruct and subtract 0 dir
+    if [ $NMORE != $NMORE_OLD ]
+      then
+      echo "$NMORE directories remaining..."
+    fi
+    NMORE_OLD=$NMORE
+  done
+
+#combine and cleanup
+if [ -n "$OUTPUTFILE" ] 
+  then
+#check if output file already exists
+  if [ -e "$OUTPUTFILE" ] 
+  then
+    echo "output file $OUTPUTFILE exists, moving to $OUTPUTFILE.bak"
+    mv $OUTPUTFILE $OUTPUTFILE.bak
+  fi
+
+  echo "cleaning up temp files"
+  for i in $(ls $TEMPDIR)
+  do
+    cat $TEMPDIR/$i >> $OUTPUTFILE
+  done
+fi
+
+rm -rf $TEMPDIR
+
+echo "finished"
+
+
+\end{lstlisting}

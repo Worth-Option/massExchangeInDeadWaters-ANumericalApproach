@@ -292,12 +292,29 @@ try:
     tracerData.time = tracerData.time - massTimeZero
 except:pass
 
+# Partial Tracer at Interface
+try:
+    interfaceTracer = dict()
+    regions = ['Bottom', 'Middle', 'Top']
+    for reg in regions:
+        interfaceTracer[reg] = pd.read_csv('preTreatment/tracer'+reg+'.dat',\
+                                            delimiter='\t', header = 4)
+        interfaceTracer[reg].columns = ['time', 'tracer']
+        interfaceTracer[reg].time = interfaceTracer[reg].time - massTimeZero
+    Eraw = pd.read_csv('preTreatment/velocityInterface.dat', delimiter='\t',\
+                    header = 4)
+    Eraw.columns = ['time', 'absVelInt']
+    Eraw.time = Eraw.time - massTimeZero
+    Eraw.absVelInt = Eraw.absVelInt/(2*H*L)
+except:pass
+
 # Generic Planes
 files = os.listdir('preTreatment')
 
 # Check for csv files
 rawFiles = list()
 csvFiles = list()
+datFiles = list()
 uniqueRaw = list()
 uniqueVar = list()
 
@@ -316,8 +333,13 @@ for item in files:
 for item in files:
       if re.search('.\.csv', item):
           csvFiles.append(item)
+          
+for item in files:
+      if re.search('.\.dat', item):
+          datFiles.append(item)
 
 csvFiles.sort() 
+datFiles.sort() 
 rawFiles.sort()
 
 for item in rawFiles:
@@ -381,7 +403,7 @@ try:
     del aux, variableName, item2, plane
 except:pass
 
-del files, item, rawFiles, csvFiles
+del files, item, rawFiles, csvFiles, reg
 
 \end{lstlisting}
 
@@ -418,6 +440,7 @@ The data is ensembled averaged and then exported to plot.py script
 import re
 import pandas as pd
 import openpyxl
+from scipy.interpolate import interp1d
 
 def dfRename(var, dtf):
     names = ['x', 'y', 'z']
@@ -547,9 +570,6 @@ UMean_00_04_Dirx = varTreatment(uniqueRaw, UMean, colNames, 6,'x',
                                'UMean_00_4_',2, 0, 4)
 UMean_00_04_Dirz = varTreatment(uniqueRaw, UMean, colNames, 6,'z',
                                'UMean_00_4_',2, 0, 4)
-interfaceVel = varTreatment(['p00'], UMean, colNames, 6, 'None','UMean_p00_',
-                            2, 0, 0)
-interfaceVel = interfaceVel['p00'].v
 
 ## lambVectorMean
 colNames = ['lambVectorMean_x', 'lambVectorMean_y', 'lambVectorMean_z']
@@ -660,6 +680,29 @@ fig4aOur = varTreatment(['p17'], UMean, colNames, 6, "y",'UMean_p17_',
 fig4aOur = fig4aOur['p17']
 fig4aOur.u = fig4aOur.u/U
 
+# Errors from experimental
+error = dict()
+error['X'] = literatureExp.iloc[:,0]
+error['Numerical_u'] = interp1d(fig4aOur.iloc[:,0],fig4aOur.u)(literatureExp.iloc[:,0])
+error['Experimental_u'] = literatureExp.iloc[:,1]
+
+error = pd.DataFrame(data=error)
+error.eval('Error = Experimental_u - Numerical_u', inplace=True)
+error.eval('Abs_Error = abs(Experimental_u - Numerical_u)', inplace=True)
+error.eval('Rel_Error = (Experimental_u - Numerical_u)/Experimental_u', inplace=True)
+error.eval('Abs_Rel_Error = abs((Experimental_u - Numerical_u)/Experimental_u)', inplace=True)
+
+description = error.describe()
+
+if not os.path.isfile('preTreatment/results/Excel/validationData.xlsx'):
+    wb = openpyxl.Workbook()
+    wb.save('preTreatment/results/Excel/validationData.xlsx')
+
+with pd.ExcelWriter('preTreatment/results/Excel/validationData.xlsx',
+                    engine="openpyxl", mode='a') as writer:
+    error.to_excel(writer, sheet_name='Errors', index=False)
+    description.to_excel(writer, sheet_name='Statistical Description')
+
 del lambVectorMean, pMean, RMean, vorticityMean, colNames
 
 \end{lstlisting}
@@ -697,6 +740,8 @@ Mass quantities are analysed in two ways: by tracer volume and y-velocity
 # Libraries
 from datetime import datetime
 import numpy as np
+import pandas as pd
+import openpyxl
 from scipy.optimize import curve_fit
 
 
@@ -728,7 +773,7 @@ kRelError = ((k - kexp)/kexp)*100
 kAbsError = kexp - k
 
 # Mass as function of velocity
-E = interfaceVel.apply(np.abs).mean()/2
+E = Eraw.absVelInt.mean()
 
 tdvel = W/E
 kvel = W / (tdvel * U)
@@ -755,6 +800,18 @@ file.write("k = %.2f\n" %kAbsError)
 file.write("---\nData analysed in {} (GMT-4)".format(today))
 file.close()
 
+# Construct mass dataFrame
+tracerDataExport = tracerData
+tracerDataExport['modelled'] = modelmass
+colNames = ['Time','Numerical','Modelled']
+tracerDataExport.columns = colNames
+
+tracerDataExport.to_csv('preTreatment/results/CSV/tracerData.csv')
+with pd.ExcelWriter('preTreatment/results/Excel/tracerData.xlsx',
+                    engine="openpyxl", mode='w') as writer:
+    for df_name, df in tracerDataExport.items():
+        df.to_excel(writer, sheet_name=df_name, index=False)
+        
 del file, now, today
 
 \end{lstlisting}
@@ -791,6 +848,7 @@ Data is imported from dataProcess.py and ploted into png figures
 # Libraries
 import re
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 from matplotlib.offsetbox import AnchoredText
 
 def plotVar(varName, axis, title, name, col, admensional, first, last):
@@ -830,13 +888,13 @@ def plotVar(varName, axis, title, name, col, admensional, first, last):
 noTitle = "None"
     
 ## RMean Dir_x_00_04
-axisNames = ['(x-x0)/L','Rmag/$U^2$']
+axisNames = ['(x-x0)/L','Rmag/U2']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical XZ planes'
 figureName = 'RMean_mag_Dir_x_00_04'
 plotVar(RMean_00_04_Dirx, axisNames, noTitle, figureName, 7, U**2, 0, 4)
 
 ## RMean Dir_x_00_04
-axisNames = ['Rmag/$U^2$', 'z/H']
+axisNames = ['Rmag/U2', 'z/H']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical XZ planes'
 figureName = 'RMean_mag_Dir_x_00_04'
 plotVar(RMean_00_04_Dirz, axisNames, noTitle, figureName, 7, U**2, 0, 4)
@@ -924,13 +982,13 @@ plotVar(vorticityMean_00_04_Dirz, axisNames, noTitle, figureName, 4, 1, 0, 4)
 # Vertical Planes Varying the X axis from X = 0.25 to X = 0.50
 # =============================================================================
 ## RMean Dir_y_05_11
-axisNames = ['Rmag/$U^2$', '(y-y0)/H']
+axisNames = ['Rmag/U2', '(y-y0)/H']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical YZ planes'
 figureName = 'RMean_mag_Dirx_05_11'
 plotVar(RMean_05_11_Diry, axisNames, noTitle, figureName, 7, U**2, 5, 11)
 
 ## RMean Dir_z_05_11
-axisNames = ['Rmag/$U^2$', 'z/H']
+axisNames = ['Rmag/U2', 'z/H']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at vertical YZ planes'
 figureName = 'RMean_mag_Dir_z_05_11'
 plotVar(RMean_05_11_Dirz, axisNames, noTitle, figureName, 7, U**2, 5, 11)
@@ -1019,13 +1077,13 @@ plotVar(vorticityMean_05_11_Dirz, axisNames, noTitle, figureName, 4, 1, 5, 11)
 # Horizontal Planes Varying the Z axis from Z = 0 to Z = 0.10
 # =============================================================================
 ## RMean Dir_x_12_21
-axisNames = ['(x-x0)/L', 'Rmag/$U^2$']
+axisNames = ['(x-x0)/L', 'Rmag/U2']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at horizontal XY planes'
 figureName = 'RMean_mag_Dir_x_12_21'
 plotVar(RMean_12_21_Dirx, axisNames, noTitle, figureName, 7, U**2, 12, 21)
 
 ## RMean Dir_y_12_21
-axisNames = ['(y-y0)/H', 'Rmag/$U^2$']
+axisNames = ['(y-y0)/H', 'Rmag/U2']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude at horizontal XY planes'
 figureName = 'RMean_mag_Dir_y_12_21'
 plotVar(RMean_12_21_Diry, axisNames, noTitle, figureName, 7, U**2, 12, 21)
@@ -1112,13 +1170,40 @@ plotVar(vorticityMean_12_21_Diry, axisNames, noTitle, figureName, 4, 1, 12, 21)
 # Validation Graph
 # =============================================================================
 
+## Figure 4
+#fig4, ax4 = plt.subplots(figsize=(9,6), dpi=300)
+#ax4.plot(literatureExp.iloc[:,0], literatureExp.iloc[:,1],'k.',
+#         label='Experimental (Xiang et al., 2019)')
+#ax4.plot(literatureLES.iloc[:,0], literatureLES.iloc[:,1],'--',
+#         label='Numerical (Xiang et al., 2019)')
+#l, caps, c = plt.errorbar(errorbarcsv.iloc[:,1], errorbarcsv.u/U, errorbarcsv.iloc[:,9]/U,
+#             elinewidth = 2, capsize = 5, capthick = 1,
+#             marker = 'o', markevery=5, errorevery = 5,
+#             uplims = True, lolims = True, 
+#             lw=1.5, aa = True, label='Presented Model')
+#
+#for cap in caps:
+#    cap.set_marker("_")
+#
+#ax4.legend(loc='best',fontsize='x-large')
+#   
+##ax4.set_title('Time Averaged x-velocity at 0.6H'
+##             ,fontsize='xx-large')
+#
+#plt.grid()
+#plt.autoscale(enable=True, tight=True)
+#plt.xlabel('(y-y0)/H',fontsize='x-large')
+#plt.ylabel('u/U',fontsize='x-large')
+#plt.savefig('preTreatment/results/Plot/validationWithErrorbar.jpg', bbox_inches='tight')
+
 # Figure 4
 fig4, ax4 = plt.subplots(figsize=(9,6), dpi=300)
 ax4.plot(literatureExp.iloc[:,0], literatureExp.iloc[:,1],'k.',
-         label='Experimental')
+         label='Experimental (Xiang et al., 2019)')
 ax4.plot(literatureLES.iloc[:,0], literatureLES.iloc[:,1],'--',
-         label='Xiang et al. (2019)')
-ax4.plot(fig4aOur.iloc[:,0], fig4aOur.u,label='Presented Model')
+         label='Numerical (Xiang et al., 2019)')
+ax4.plot(fig4aOur.iloc[:,0], fig4aOur.u,
+         label='Presented Model')
 
 ax4.legend(loc='best',fontsize='x-large')
 
@@ -1129,7 +1214,7 @@ plt.grid()
 plt.autoscale(enable=True, tight=True)
 plt.xlabel('(y-y0)/H',fontsize='x-large')
 plt.ylabel('u/U',fontsize='x-large')
-plt.savefig('preTreatment/results/Plot/figure4.png', bbox_inches='tight')
+plt.savefig('preTreatment/results/Plot/validation.jpg', bbox_inches='tight')
 
 # Mass Decay
 figm, axm = plt.subplots(figsize=(9,6), dpi=300)
@@ -1151,9 +1236,62 @@ plt.autoscale(enable=True, tight=True)
 plt.grid()
 plt.xlabel('t [s]',fontsize='x-large')
 plt.ylabel('Concentration [non-dimensional]',fontsize='x-large')
-plt.savefig('preTreatment/results/Plot/massDecay.png', bbox_inches='tight')
+plt.savefig('preTreatment/results/Plot/massDecay.jpg', bbox_inches='tight')
+
+# Mass Decay semilogy
+figm, axm = plt.subplots(figsize=(9,6), dpi=300)
+axm.semilogy(tracerData.time,modelmass,label='Fitted Curve',color='r')
+axm.semilogy(tracerData.time,tracerData.tracerVol,label='Numerical')
+
+axm.legend(loc='best',fontsize='x-large')
+
+#axm.set_title('Mass Ejection from Groyne Field Volume'
+#             ,fontsize='xx-large')
+
+at = AnchoredText('C(t)=$C_{0}$$e^{-t/Td}$\n$k_{ajusted}$ = %.4f' % k,
+                  prop=dict(size=15), frameon=True,
+                  loc='lower left')
+axm.add_artist(at)
+
+axm.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
+axm.yaxis.set_minor_formatter(ticker.FormatStrFormatter('%.1f'))
+plt.autoscale(enable=True, tight=True)
+plt.grid()
+plt.xlabel('t [s]',fontsize='x-large')
+plt.ylabel('Concentration [non-dimensional]',fontsize='x-large')
+plt.savefig('preTreatment/results/Plot/massDecaySemiLogY.jpg', bbox_inches='tight')
 
 del figm, axm, at, fig4, ax4, axisNames, noTitle, figureName , plotTitle
+
+# Mass Decay per Part
+figm, axm = plt.subplots(figsize=(9,6), dpi=300)
+for ii in regions:
+    axm.plot(interfaceTracer[ii].time,interfaceTracer[ii].tracer, label=ii)
+
+axm.legend(loc='best',fontsize='x-large')
+
+axm.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.1f'))
+axm.yaxis.set_minor_formatter(ticker.FormatStrFormatter('%.1f'))
+plt.autoscale(enable=True, tight=True)
+plt.grid()
+plt.xlabel('t [s]',fontsize='x-large')
+plt.ylabel('Concentration [non-dimensional]',fontsize='x-large')
+plt.savefig('preTreatment/results/Plot/massDecayPerPart.jpg', bbox_inches='tight')
+
+# Mass Decay per Part semilog y
+figm, axm = plt.subplots(figsize=(9,6), dpi=300)
+for ii in regions:
+    axm.semilogy(interfaceTracer[ii].time,interfaceTracer[ii].tracer, label=ii)
+
+axm.legend(loc='best',fontsize='x-large')
+
+axm.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.3f'))
+axm.yaxis.set_minor_formatter(ticker.FormatStrFormatter('%.3f'))
+plt.autoscale(enable=True, tight=True)
+plt.grid()
+plt.xlabel('t [s]',fontsize='x-large')
+plt.ylabel('Concentration [non-dimensional]',fontsize='x-large')
+plt.savefig('preTreatment/results/Plot/massDecayPerPartSemiLogY.jpg', bbox_inches='tight')
 
 \end{lstlisting}
 \subsection{thickness.py}
@@ -1403,7 +1541,7 @@ excelExport(thickness, 'thickness')
 \section{dataAnalysis Scripts}
 \subsection{multipleSimulationImport.py}
 \begin{lstlisting}[language=python]
-##!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Libraries
@@ -1445,20 +1583,24 @@ for item in csvFiles:
     try:
         sim = re.split("_", item)[0]
         variableName = re.split("_", item)[1]
-        plane = re.split("_", item)[2]
-        axis = re.split("_", item)[4]
-        axis = axis[:-4] #Removes '.csv'
+        if variableName[-4:] == '.csv':
+            variableName = variableName[:-4]
+        
         if sim not in uniqueSim:
             uniqueSim.append(sim)
         if variableName not in uniqueVar:
             uniqueVar.append(variableName)
-        if axis not in direction:
-            direction.append(axis)
-        if plane not in planes:
-            planes.append(plane)
-        del variableName, axis, plane
-    except:
-        continue
+        try:
+            plane = re.split("_", item)[2]
+            axis = re.split("_", item)[4]
+            axis = axis[:-4] #Removes '.csv'
+            if axis not in direction:
+                direction.append(axis)
+            if plane not in planes:
+                planes.append(plane)
+            del variableName, axis, plane
+        except:continue
+    except:continue
 
 for item in xlsxFiles:
     try:
@@ -1494,18 +1636,27 @@ for item in txtFiles:
     del item, d, df, words, line
     del ktracer, kvelocity
 
+tracerData = dict()
 for var in uniqueVar:
-    data[var] = dict()
+    if var != 'tracerData.csv':
+        data[var] = dict()
     for sim in uniqueSim:
         data[var][sim] = dict()
-        for plane in planes:
-            data[var][sim][plane] = dict()
-            for axis in direction:
-                file = sim+"_"+var+"_"+plane+"_Dir_"+axis+".csv"
-                pathToFile = os.path.join(folder, file)
-                if os.path.exists(pathToFile):
-                    data[var][sim][plane][axis] = pd.read_csv(pathToFile,\
-                        index_col=0, float_precision="high")
+        if var == 'tracerData':
+            file = sim+"_tracerData.csv"
+            pathToFile = os.path.join(folder, file)
+            if os.path.exists(pathToFile):
+                tracerData[sim] = pd.read_csv(pathToFile, index_col=0,
+                          float_precision="high")
+        else:
+            for plane in planes:
+                data[var][sim][plane] = dict()
+                for axis in direction:
+                    file = sim+"_"+var+"_"+plane+"_Dir_"+axis+".csv"
+                    pathToFile = os.path.join(folder, file)
+                    if os.path.exists(pathToFile):
+                        data[var][sim][plane][axis] = pd.read_csv(pathToFile,\
+                            index_col=0, float_precision="high")
 
 thickness = dict()
 for sim in uniqueSim:
@@ -1544,8 +1695,8 @@ except:
 
 try:
     massExchange.insert(1,'Veg. Density',densities['Density'])
-except:
-    pass
+except:pass
+
 massExchange.style.format({'Veg. Density': "{:.4%}"})
 massExchange.sort_values(by=['Veg. Density'], inplace=True)
 
@@ -1656,7 +1807,7 @@ def plotVar(varName, axis, title, col, admensional):
 noTitle = "None"
             
 ## RMean
-axisNames = ['(x-x0)/L','Rmag/$U^2$']
+axisNames = ['(x-x0)/L','Rmag/U2']
 plotTitle = 'Time Averaged Reynolds Stresses Magnitude'
 plotVar('RMean', axisNames, noTitle, 7, U**2)
 
@@ -1703,9 +1854,9 @@ ax1 = ax.twinx()
 #    vDensity = case['Veg. Density'].iloc[0]*100
 #    caseName = 'Case '+str(densities.loc[densities['Simulation'] == sim].index[0])
     
-ln1 = ax.plot(massExchange['Veg. Density']*100, massExchange['kTracer'], 'ko-',
+ln1 = ax.plot(massExchange['Veg. Density']*100, massExchange['kTracer'], 'bo',
         label=r'$k_{DZ}$', lw=2, ms=6)
-ln2 = ax1.plot(massExchange['Veg. Density']*100, massExchange['mrtTracer'], 'ks--', 
+ln2 = ax1.plot(massExchange['Veg. Density']*100, massExchange['mrtTracer'], 'ks', 
          label=r'$T_{DZ}$', lw=2, ms=5)
     
 # Primary Axis
@@ -1718,7 +1869,7 @@ ax.set_xlim(0, 11)
 # Secondary Axis
 ax1.set_ylabel(r'$T_{DZ}$ [s]',fontsize='x-large')
 
-plt.autoscale(enable=True)
+plt.autoscale(enable=True, tight=True)
 
 # Legend
 lns = ln1+ln2
@@ -1740,6 +1891,165 @@ plt.close()
 del lns, ln1, ln2, ax, fig, labs
 
 # =============================================================================
+# Tracer decay
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln0 = ax.plot(tracerData['x068']['Time'],
+              tracerData['x068']['Numerical'],
+              '-', label='Case 0', lw=2, ms=6)
+ln1 = ax.plot(tracerData['x062']['Time'],
+              tracerData['x062']['Numerical'],
+              '--', label='Case 1', lw=2, ms=6)
+ln2 = ax.plot(tracerData['x063']['Time'],
+              tracerData['x063']['Numerical'],
+              '-.', label='Case 2', lw=2, ms=6)
+ln3 = ax.plot(tracerData['x064']['Time'],
+              tracerData['x064']['Numerical'],
+              ':', label='Case 3', lw=2, ms=6)
+ln4 = ax.plot(tracerData['x065']['Time'],
+              tracerData['x065']['Numerical'],
+              '-.', label='Case 4', lw=2, ms=6)
+ln5 = ax.plot(tracerData['x066']['Time'],
+              tracerData['x066']['Numerical'],
+              '--', label='Case 5', lw=2, ms=6)
+ln6 = ax.plot(tracerData['x067']['Time'],
+              tracerData['x067']['Numerical'],
+              '--', label='Case 6', lw=2, ms=6)
+ln7 = ax.plot(tracerData['x115']['Time'],
+              tracerData['x115']['Numerical'],
+              '-.', label='Case 7', lw=2, ms=6)
+ln8 = ax.plot(tracerData['x116']['Time'],
+              tracerData['x116']['Numerical'],
+              ':', label='Case 8', lw=2, ms=6)
+ln9 = ax.plot(tracerData['x117']['Time'],
+              tracerData['x117']['Numerical'],
+              '-.', label='Case 9', lw=2, ms=6)
+ln10 = ax.plot(tracerData['x115']['Time'],
+               tracerData['x115']['Numerical'],
+              '--', label='Case 10', lw=2, ms=6)
+
+# Primary Axis
+ax.set_xlabel('Time [s]',fontsize='x-large')
+ax.set_ylabel('Concentration',fontsize='x-large')
+
+plt.autoscale(enable=True, tight=True)
+plt.grid()
+
+# Legend
+lns = ln0+ln1+ln2+ln3+ln4+ln5+ln6+ln7+ln8+ln9+ln10
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs)
+
+# Save the image in memory in JPG format
+figName = 'tracerDecay.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
+# =============================================================================
+# Tracer decay (SemiLog Y)
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln0 = ax.semilogy(tracerData['x068']['Time'],
+              tracerData['x068']['Numerical'],
+              '-', label='Case 0', lw=2, ms=6)
+ln1 = ax.semilogy(tracerData['x062']['Time'],
+              tracerData['x062']['Numerical'],
+              '--', label='Case 1', lw=2, ms=6)
+ln2 = ax.semilogy(tracerData['x063']['Time'],
+              tracerData['x063']['Numerical'],
+              '-.', label='Case 2', lw=2, ms=6)
+ln3 = ax.semilogy(tracerData['x064']['Time'],
+              tracerData['x064']['Numerical'],
+              ':', label='Case 3', lw=2, ms=6)
+ln4 = ax.semilogy(tracerData['x065']['Time'],
+              tracerData['x065']['Numerical'],
+              '-.', label='Case 4', lw=2, ms=6)
+ln5 = ax.semilogy(tracerData['x066']['Time'],
+              tracerData['x066']['Numerical'],
+              '--', label='Case 5', lw=2, ms=6)
+ln6 = ax.semilogy(tracerData['x067']['Time'],
+              tracerData['x067']['Numerical'],
+              '--', label='Case 6', lw=2, ms=6)
+ln7 = ax.semilogy(tracerData['x115']['Time'],
+              tracerData['x115']['Numerical'],
+              '-.', label='Case 7', lw=2, ms=6)
+ln8 = ax.semilogy(tracerData['x116']['Time'],
+              tracerData['x116']['Numerical'],
+              ':', label='Case 8', lw=2, ms=6)
+ln9 = ax.semilogy(tracerData['x117']['Time'],
+              tracerData['x117']['Numerical'],
+              '-.', label='Case 9', lw=2, ms=6)
+ln10 = ax.semilogy(tracerData['x115']['Time'],
+               tracerData['x115']['Numerical'],
+              '--', label='Case 10', lw=2, ms=6)
+
+# Primary Axis
+ax.set_xlabel('Time [s]',fontsize='x-large')
+ax.set_ylabel('Concentration',fontsize='x-large')
+
+plt.autoscale(enable=True, tight=True)
+plt.grid()
+
+# Legend
+lns = ln0+ln1+ln2+ln3+ln4+ln5+ln6+ln7+ln8+ln9+ln10
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs)
+
+# Save the image in memory in JPG format
+figName = 'tracerDecaySemiLogY.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
+# =============================================================================
+# X-Velocity at XY PLANE versus (y-y0)/H Unique
+# =============================================================================
+fig, ax = plt.subplots(figsize=(9,6), dpi=500)
+
+ln0 = ax.plot(data['UMean']['x068']['p17']['y']['(y-y0)/H'],
+              data['UMean']['x068']['p17']['y']['u']/U,
+              '-', label='Case 0', lw=2, ms=6)
+ln1 = ax.plot(data['UMean']['x062']['p17']['y']['(y-y0)/H'],
+              data['UMean']['x062']['p17']['y']['u']/U,
+              '--', label='Case 1', lw=2, ms=6)
+ln4 = ax.plot(data['UMean']['x065']['p17']['y']['(y-y0)/H'],
+              data['UMean']['x065']['p17']['y']['u']/U,
+              '-.', label='Case 4', lw=2, ms=6)
+ln7 = ax.plot(data['UMean']['x115']['p17']['y']['(y-y0)/H'],
+              data['UMean']['x115']['p17']['y']['u']/U,
+              '-.', label='Case 7', lw=2, ms=6)
+ln10 = ax.plot(data['UMean']['x115']['p17']['y']['(y-y0)/H'],
+               data['UMean']['x115']['p17']['y']['u']/U,
+              ':', label='Case 10', lw=2, ms=6)
+
+# Primary Axis
+ax.set_xlabel(r'(y-$y_0$)/H',fontsize='x-large')
+ax.set_ylabel('u/U',fontsize='x-large')
+
+plt.autoscale(enable=True, tight=True)
+plt.grid()
+
+# Legend
+lns = ln0+ln1+ln4+ln7+ln10
+labs = [l.get_label() for l in lns]
+ax.legend(lns, labs, loc=7)
+
+# Save the image in memory in JPG format
+figName = 'velXYPlane.jpg'
+figName = os.path.join(selFigFolder, figName)
+plt.savefig(figName, box_inches='tight')
+plt.close()
+
+del lns, ax, fig, labs
+
+# =============================================================================
 # Y-Velocity at Interface versus z/H Unique
 # =============================================================================
 fig, ax = plt.subplots(figsize=(9,6), dpi=500)
@@ -1750,43 +2060,43 @@ ln0 = ax.plot(data['UMean']['x068']['p00']['z']['v']/U,
 ln1 = ax.plot(data['UMean']['x062']['p00']['z']['v']/U,
               data['UMean']['x062']['p00']['z']['z/H'],
               '--', label='Case 1', lw=2, ms=6)
-ln2 = ax.plot(data['UMean']['x063']['p00']['z']['v']/U,
-              data['UMean']['x063']['p00']['z']['z/H'],
-              '-.', label='Case 2', lw=2, ms=6)
-ln3 = ax.plot(data['UMean']['x064']['p00']['z']['v']/U,
-              data['UMean']['x064']['p00']['z']['z/H'],
-              ':', label='Case 3', lw=2, ms=6)
+#ln2 = ax.plot(data['UMean']['x063']['p00']['z']['v']/U,
+#              data['UMean']['x063']['p00']['z']['z/H'],
+#              '-.', label='Case 2', lw=2, ms=6)
+#ln3 = ax.plot(data['UMean']['x064']['p00']['z']['v']/U,
+#              data['UMean']['x064']['p00']['z']['z/H'],
+#              ':', label='Case 3', lw=2, ms=6)
 ln4 = ax.plot(data['UMean']['x065']['p00']['z']['v']/U,
               data['UMean']['x065']['p00']['z']['z/H'],
               '-.', label='Case 4', lw=2, ms=6)
-ln5 = ax.plot(data['UMean']['x066']['p00']['z']['v']/U,
-              data['UMean']['x066']['p00']['z']['z/H'],
-              '--', label='Case 5', lw=2, ms=6)
-ln6 = ax.plot(data['UMean']['x067']['p00']['z']['v']/U,
-              data['UMean']['x067']['p00']['z']['z/H'],
-              '--', label='Case 6', lw=2, ms=6)
+#ln5 = ax.plot(data['UMean']['x066']['p00']['z']['v']/U,
+#              data['UMean']['x066']['p00']['z']['z/H'],
+#              '--', label='Case 5', lw=2, ms=6)
+#ln6 = ax.plot(data['UMean']['x067']['p00']['z']['v']/U,
+#              data['UMean']['x067']['p00']['z']['z/H'],
+#              '--', label='Case 6', lw=2, ms=6)
 ln7 = ax.plot(data['UMean']['x115']['p00']['z']['v']/U,
               data['UMean']['x115']['p00']['z']['z/H'],
               '-.', label='Case 7', lw=2, ms=6)
-ln8 = ax.plot(data['UMean']['x116']['p00']['z']['v']/U,
-              data['UMean']['x116']['p00']['z']['z/H'],
-              ':', label='Case 8', lw=2, ms=6)
-ln9 = ax.plot(data['UMean']['x117']['p00']['z']['v']/U,
-              data['UMean']['x117']['p00']['z']['z/H'],
-              '-.', label='Case 9', lw=2, ms=6)
+#ln8 = ax.plot(data['UMean']['x116']['p00']['z']['v']/U,
+#              data['UMean']['x116']['p00']['z']['z/H'],
+#              ':', label='Case 8', lw=2, ms=6)
+#ln9 = ax.plot(data['UMean']['x117']['p00']['z']['v']/U,
+#              data['UMean']['x117']['p00']['z']['z/H'],
+#              '-.', label='Case 9', lw=2, ms=6)
 ln10 = ax.plot(data['UMean']['x115']['p00']['z']['v']/U,
               data['UMean']['x115']['p00']['z']['z/H'],
-              '--', label='Case 10', lw=2, ms=6)
+              ':', label='Case 10', lw=2, ms=6)
 
 # Primary Axis
 ax.set_xlabel('v/U',fontsize='x-large')
 ax.set_ylabel('z/H',fontsize='x-large')
 
-plt.autoscale(enable=True)
+plt.autoscale(enable=True, tight=True)
 plt.grid()
 
 # Legend
-lns = ln0+ln1+ln2+ln3+ln4+ln5+ln6+ln7+ln8+ln9+ln10
+lns = ln0+ln1+ln4+ln7+ln10
 labs = [l.get_label() for l in lns]
 ax.legend(lns, labs, loc=7)
 
@@ -1826,7 +2136,7 @@ ln5 = ax.plot(data['UMean']['x066']['p00']['z']['v']/U,
 ax.set_xlabel('v/U',fontsize='x-large')
 ax.set_ylabel('z/H',fontsize='x-large')
 
-plt.autoscale(enable=True)
+plt.autoscale(enable=True, tight=True)
 plt.grid()
 
 # Legend
@@ -1873,7 +2183,7 @@ ln10 = ax.plot(data['UMean']['x115']['p00']['z']['v']/U,
 ax.set_xlabel('v/U',fontsize='x-large')
 ax.set_ylabel('z/H',fontsize='x-large')
 
-plt.autoscale(enable=True)
+plt.autoscale(enable=True, tight=True)
 plt.grid()
 
 # Legend
@@ -1935,7 +2245,7 @@ ln10 = ax.plot(data['UMean']['x115']['p00']['x']['(x-x0)/L'],
 ax.set_xlabel('(x-x0)/L',fontsize='x-large')
 ax.set_ylabel('v/U',fontsize='x-large')
 
-plt.autoscale(enable=True)
+plt.autoscale(enable=True, tight=True)
 plt.grid()
 
 # Legend
@@ -1979,7 +2289,7 @@ ln5 = ax.plot(data['UMean']['x066']['p00']['x']['(x-x0)/L'],
 ax.set_xlabel('(x-x0)/L',fontsize='x-large')
 ax.set_ylabel('v/U',fontsize='x-large')
 
-plt.autoscale(enable=True)
+plt.autoscale(enable=True, tight=True)
 plt.grid()
 
 # Legend
@@ -2026,7 +2336,7 @@ ln10 = ax.plot(data['UMean']['x115']['p00']['x']['(x-x0)/L'],
 ax.set_xlabel('(x-x0)/L',fontsize='x-large')
 ax.set_ylabel('v/U',fontsize='x-large')
 
-plt.autoscale(enable=True)
+plt.autoscale(enable=True, tight=True)
 plt.grid()
 
 # Legend
@@ -2086,9 +2396,9 @@ ln10 = ax.plot(thickness['x115']['(x-x0)/L'],
     
 # Primary Axis
 ax.set_xlabel('(x-x0)/L',fontsize='x-large')
-ax.set_ylabel(r'$\delta_{in}$/U',fontsize='x-large')
+ax.set_ylabel(r'$\delta_{in}$/W',fontsize='x-large')
 
-plt.autoscale(enable=True)
+plt.autoscale(enable=True, tight=True)
 plt.grid()
 
 # Legend
@@ -2145,9 +2455,9 @@ ln10 = ax.plot(thickness['x115']['(x-x0)/L'],
     
 # Primary Axis
 ax.set_xlabel('(x-x0)/L',fontsize='x-large')
-ax.set_ylabel(r'$\delta_{out}$/U',fontsize='x-large')
+ax.set_ylabel(r'$\delta_{out}$/W',fontsize='x-large')
 
-plt.autoscale(enable=True)
+plt.autoscale(enable=True, tight=True)
 plt.grid()
 
 # Legend
@@ -2204,9 +2514,9 @@ ln10 = ax.plot(thickness['x115']['(x-x0)/L'],
     
 # Primary Axis
 ax.set_xlabel('(x-x0)/L',fontsize='x-large')
-ax.set_ylabel(r'$\delta$/U',fontsize='x-large')
+ax.set_ylabel(r'$\delta$/W',fontsize='x-large')
 
-plt.autoscale(enable=True)
+plt.autoscale(enable=True, tight=True)
 plt.grid()
 
 # Legend
